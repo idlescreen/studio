@@ -54,7 +54,7 @@ impl QueueEntry {
         let job = v
             .get("job")
             .ok_or_else(|| "missing field `job`".to_string())
-            .and_then(|j| StudioJob::from_value(j))?;
+            .and_then(StudioJob::from_value)?;
         let status = match v.get("status") {
             Some(Value::Str(s)) => JobStatus::from_str(s)?,
             Some(_) => return Err("invalid type for `status`: expected string".into()),

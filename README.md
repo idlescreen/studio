@@ -1,6 +1,6 @@
 # studio
 
-[![studio2201 Suite](https://img.shields.io/badge/studio2201-5%2F5%20Verified-2f6f5e?logo=shield)](https://studio2201.com/agents#badges)
+[![studio2201 gate](https://github.com/idlescreen/studio/actions/workflows/studio2201.yml/badge.svg)](https://github.com/idlescreen/studio/actions/workflows/studio2201.yml)
 
 Offline saver → video rendering: the `render` engine (headless sim →
 AV1/H.264/PNG/raw via ffmpeg) plus `idle-studio`, the Director TUI for

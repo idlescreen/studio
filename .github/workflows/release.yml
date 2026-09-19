@@ -120,7 +120,7 @@ jobs:
           shopt -s nullglob
           for file in target/debian/*.deb \
                       target/generate-rpm/*.rpm \
-                      engine/target/generate-rpm/*.rpm \
+                      engine/target/generate-rpm/*.rpm; do
             cosign sign-blob --yes --output-signature "${file}.sig" --output-certificate "${file}.pem" "$file"
           done
 

@@ -494,4 +494,31 @@ mod tests {
         assert!(parse("{} x").is_err());
         assert!(parse("{").is_err());
     }
+
+    #[test]
+    fn malformed_inputs_never_panic() {
+        // Every prefix of a valid doc — Err or Ok, never panic.
+        let good = r#"{"a": [1, 2.5, "x", true, null, {"b": "y"}], "c": "\u00e9"}"#;
+        for i in 0..=good.len() {
+            if let Some(s) = good.get(..i) {
+                let _ = parse(s);
+            }
+        }
+        for bad in [
+            "", "{", "[", "\"", "\\", "{\"a\":", "[1,", "-", "1e", "1e+", "0.",
+            ".5", "+1", "01", "--1", "{\"a\"}", "[1;2]", "{,}", "[,]", "\"\\u\"",
+            "\"\\uZZZZ\"", "\"\\uD800\"", "\"\\uD800x\"", "\"\\uDC00\"", "\"\\x\"",
+            "tru", "truex", "nulll", "NaN", "Infinity", "{\"a\":1,}", "{a:1}",
+            "1.2.3", "1e9999", "-0", "{}", "[]", "[[[]]]",
+        ] {
+            let _ = parse(bad);
+        }
+        // Deep nesting past MAX_DEPTH must Err, not overflow the stack.
+        let deep = "[".repeat(1000) + &"]".repeat(1000);
+        assert!(parse(&deep).is_err());
+        // Control characters inside strings.
+        assert!(parse("\"\u{0007}\"").is_err());
+        // Lone "-" / "+" start no valid value.
+        assert!(parse("[-]").is_err());
+    }
 }

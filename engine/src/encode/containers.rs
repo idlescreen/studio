@@ -65,11 +65,10 @@ where
     B: std::ops::Deref,
     B::Target: AsRef<[u8]>,
 {
-    tracing::info!(
-        encoder,
-        hw = is_hardware_encoder(encoder),
-        codec = if av1 { "av1" } else { "h264" },
-        "encode backend"
+    crate::info!(
+        "encode backend encoder={encoder} hw={} codec={}",
+        is_hardware_encoder(encoder),
+        if av1 { "av1" } else { "h264" }
     );
     let mut args: Vec<String> = [
         "-hide_banner",

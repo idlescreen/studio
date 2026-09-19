@@ -1,6 +1,5 @@
 //! render — offline IdleScreen exporter.
 
-use clap::Parser;
 use idle_render::cli::Args;
 use idle_render::models::{Container, OutputFormat};
 use idle_render::pipeline::run_pipeline;
@@ -8,13 +7,7 @@ use idle_render::pipeline_snapshot::SnapshotOutcome;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .init();
+    idle_render::log::init("info");
 
     let args = Args::parse();
     let (job, backend) = match args.into_job() {

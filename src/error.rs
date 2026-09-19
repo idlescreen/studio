@@ -1,18 +1,45 @@
 use std::path::PathBuf;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum StudioError {
-    #[error("io error on {path}: {source}")]
     Io {
         path: PathBuf,
         source: std::io::Error,
     },
-    #[error("json error: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("render failed: {0}")]
+    Json(String),
     Render(String),
-    #[error("render binary not found (set RENDER / IDLE_RENDER or PATH)")]
     RenderMissing,
-    #[error("queue error: {0}")]
     Queue(String),
+}
+
+impl std::fmt::Display for StudioError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io { path, source } => write!(f, "io error on {}: {source}", path.display()),
+            Self::Json(e) => write!(f, "json error: {e}"),
+            Self::Render(m) => write!(f, "render failed: {m}"),
+            Self::RenderMissing => {
+                write!(
+                    f,
+                    "render binary not found (set RENDER / IDLE_RENDER or PATH)"
+                )
+            }
+            Self::Queue(m) => write!(f, "queue error: {m}"),
+        }
+    }
+}
+
+impl std::error::Error for StudioError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io { source, .. } => Some(source),
+            _ => None,
+        }
+    }
+}
+
+impl From<idle_render::json::Error> for StudioError {
+    fn from(e: idle_render::json::Error) -> Self {
+        Self::Json(e.to_string())
+    }
 }

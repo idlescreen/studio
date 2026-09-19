@@ -2,21 +2,43 @@
 //!
 //! Studio does not reimplement export. It stores jobs and asks `render` to run them.
 
+use idle_render::json::Value;
 use idle_render::JobSpec;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// One queued item for the Director UI.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StudioJob {
     pub id: String,
-    #[serde(flatten)]
+    /// Serialized flat (serde `flatten`): `id` first, then JobSpec fields.
     pub spec: JobSpec,
 }
 
 impl StudioJob {
     pub fn new(id: String, spec: JobSpec) -> Self {
         Self { id, spec }
+    }
+
+    /// JSON object: `id` followed by the JobSpec fields (was serde flatten).
+    pub fn to_value(&self) -> Value {
+        let mut pairs = vec![("id".to_string(), Value::Str(self.id.clone()))];
+        if let Value::Object(spec_pairs) = self.spec.to_value() {
+            pairs.extend(spec_pairs);
+        }
+        Value::Object(pairs)
+    }
+
+    /// Inverse of [`StudioJob::to_value`]; JobSpec ignores the `id` key.
+    pub fn from_value(v: &Value) -> Result<Self, String> {
+        let id = match v.get("id") {
+            Some(Value::Str(s)) => s.clone(),
+            Some(_) => return Err("invalid type for `id`: expected string".into()),
+            None => return Err("missing field `id`".into()),
+        };
+        Ok(Self {
+            id,
+            spec: JobSpec::from_value(v)?,
+        })
     }
 
     /// Write a temp job-file and return its path (caller deletes).
@@ -95,8 +117,9 @@ mod tests {
             id: "1".into(),
             spec: spec(),
         };
-        let s = serde_json::to_string(&j).expect("ser");
-        let back: StudioJob = serde_json::from_str(&s).expect("de");
+        let s = j.to_value().to_json();
+        let v = idle_render::json::parse(&s).expect("parse");
+        let back = StudioJob::from_value(&v).expect("de");
         assert_eq!(back.id, "1");
         assert_eq!(back.spec.effect, "ripple");
         assert_eq!(back.spec.segment.as_deref(), Some("5s"));

@@ -180,10 +180,35 @@ pub fn make_job(
     (job, backend)
 }
 
+/// tempfile replacement: unique scratch dir under the system temp dir,
+/// removed on Drop. `path()` mirrors `tempfile::TempDir::path`.
+pub struct TmpDir(PathBuf);
+impl TmpDir {
+    pub fn path(&self) -> &Path {
+        &self.0
+    }
+}
+impl Drop for TmpDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+pub fn tempdir() -> std::io::Result<TmpDir> {
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let path = std::env::temp_dir().join(format!(
+        "idle-snaptest-{}-{}",
+        std::process::id(),
+        SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&path)?;
+    Ok(TmpDir(path))
+}
+
 /// Helper for CLI argument parsing test.
 pub fn bin_cli_check() -> String {
-    // Build args using clap::Parser::try_parse_from with a fake argv.
-    let args = <Args as clap::Parser>::try_parse_from([
+    // Build args with a fake argv.
+    let args = Args::parse_from([
         "render",
         "-e",
         "beams",
@@ -201,8 +226,7 @@ pub fn bin_cli_check() -> String {
         "/tmp/baselines",
         "--snapshot-last-only",
         "--cpu-raster",
-    ])
-    .expect("parse args");
+    ]);
     let (job, _backend) = args.into_job().expect("into_job");
     let scenario_path = baseline_path_for(&job).expect("baseline");
     format!("{}", scenario_path.extension().unwrap().to_string_lossy())

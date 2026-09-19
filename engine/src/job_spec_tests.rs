@@ -37,8 +37,8 @@ fn sample_spec() -> JobSpec {
 
 #[test]
 fn roundtrip_json() {
-    let s = serde_json::to_string(&sample_spec()).expect("ser");
-    let back: JobSpec = serde_json::from_str(&s).expect("de");
+    let s = sample_spec().to_value().to_json();
+    let back = JobSpec::from_json(&s).expect("de");
     assert_eq!(back.effect, "ripple");
     assert_eq!(back.segment.as_deref(), Some("5s"));
     assert_eq!(back.format.as_deref(), Some("png"));

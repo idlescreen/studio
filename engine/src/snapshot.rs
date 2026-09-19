@@ -10,25 +10,53 @@ use std::io::Read;
 use std::path::Path;
 
 /// Snapshot mismatch reason (carried back through [`compare`] for diagnostics).
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum SnapshotMismatch {
-    #[error("baseline missing at {0} (run with --update-baselines to seed)")]
     MissingBaseline(String),
-    #[error("baseline length {baseline} != current length {current}")]
-    LengthMismatch { baseline: usize, current: usize },
-    #[error(
-        "pixel mismatch at byte {byte_offset}: baseline {baseline:#04x} vs current {current:#04x}"
-    )]
+    LengthMismatch {
+        baseline: usize,
+        current: usize,
+    },
     PixelMismatch {
         byte_offset: usize,
         baseline: u8,
         current: u8,
     },
-    #[error("snapshot io error on {path}: {source}")]
     Io {
         path: String,
         source: std::io::Error,
     },
+}
+
+impl std::fmt::Display for SnapshotMismatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingBaseline(p) => {
+                write!(f, "baseline missing at {p} (run with --update-baselines to seed)")
+            }
+            Self::LengthMismatch { baseline, current } => {
+                write!(f, "baseline length {baseline} != current length {current}")
+            }
+            Self::PixelMismatch {
+                byte_offset,
+                baseline,
+                current,
+            } => write!(
+                f,
+                "pixel mismatch at byte {byte_offset}: baseline {baseline:#04x} vs current {current:#04x}"
+            ),
+            Self::Io { path, source } => write!(f, "snapshot io error on {path}: {source}"),
+        }
+    }
+}
+
+impl std::error::Error for SnapshotMismatch {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io { source, .. } => Some(source),
+            _ => None,
+        }
+    }
 }
 
 /// Compare two files. PNG inputs are decoded into RGBA8 (deterministic across
@@ -114,29 +142,43 @@ fn read_bytes(path: &Path) -> Result<Vec<u8>, std::io::Error> {
 }
 
 fn decode_png_rgba(bytes: &[u8], path: &Path) -> Result<Vec<u8>, SnapshotMismatch> {
-    let decoder = png::Decoder::new(bytes);
-    let mut reader = decoder.read_info().map_err(|e| SnapshotMismatch::Io {
+    let (_w, _h, rgba) = crate::png::decode_rgba8(bytes).map_err(|e| SnapshotMismatch::Io {
         path: path.display().to_string(),
-        source: std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+        source: std::io::Error::new(std::io::ErrorKind::InvalidData, e),
     })?;
-    let mut buf = vec![0u8; reader.output_buffer_size()];
-    let info = reader
-        .next_frame(&mut buf)
-        .map_err(|e| SnapshotMismatch::Io {
-            path: path.display().to_string(),
-            source: std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
-        })?;
-    buf.truncate(info.buffer_size());
-    Ok(buf)
+    Ok(rgba)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// tempfile replacement: unique dir under std::env::temp_dir, removed on Drop.
+    struct TmpDir(std::path::PathBuf);
+    impl TmpDir {
+        fn new() -> Self {
+            static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let path = std::env::temp_dir().join(format!(
+                "idle-snap-{}-{}",
+                std::process::id(),
+                SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ));
+            std::fs::create_dir_all(&path).expect("tmp");
+            Self(path)
+        }
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+    impl Drop for TmpDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
     #[test]
     fn byte_equal_passes() {
-        let tmp = tempfile::tempdir().expect("tmp");
+        let tmp = TmpDir::new();
         let a = tmp.path().join("a.bgra");
         let b = tmp.path().join("b.bgra");
         std::fs::write(&a, [1u8, 2, 3, 4]).expect("write");
@@ -146,7 +188,7 @@ mod tests {
 
     #[test]
     fn byte_unequal_fails() {
-        let tmp = tempfile::tempdir().expect("tmp");
+        let tmp = TmpDir::new();
         let a = tmp.path().join("a.bgra");
         let b = tmp.path().join("b.bgra");
         std::fs::write(&a, [1u8, 2, 3, 4]).expect("write");
@@ -157,7 +199,7 @@ mod tests {
 
     #[test]
     fn missing_baseline_surfaces() {
-        let tmp = tempfile::tempdir().expect("tmp");
+        let tmp = TmpDir::new();
         let a = tmp.path().join("a.bgra");
         let b = tmp.path().join("absent.bgra");
         std::fs::write(&a, [1u8]).expect("write");
@@ -167,7 +209,7 @@ mod tests {
 
     #[test]
     fn png_compare_decodes_to_rgba() {
-        let tmp = tempfile::tempdir().expect("tmp");
+        let tmp = TmpDir::new();
         let a = tmp.path().join("a.png");
         let b = tmp.path().join("b.png");
         let bgra = vec![10u8, 20, 30, 255];

@@ -1,10 +1,9 @@
 //! Pure-Rust PNG encoding for BGRA frames.
 //!
-//! Uses the `png` crate to wrap `&[u8]` BGRA frames as RGBA8 PNGs.
+//! Wraps `&[u8]` BGRA frames as RGBA8 PNGs via [`crate::png`].
 //! Deterministic: same input bytes ⇒ same PNG bytes (CRC32 + deflate).
 
 use crate::error::RenderError;
-use std::io::BufWriter;
 
 /// Encode a single BGRA frame as a self-contained PNG byte vector.
 ///
@@ -31,22 +30,7 @@ pub fn encode_bgra_frame_to_png(width: u32, height: u32, bgra: &[u8]) -> Vec<u8>
         dst[3] = src[3]; // A ← A
     }
 
-    let mut out = Vec::with_capacity(bgra.len() / 4 + 256);
-    {
-        let writer = BufWriter::new(&mut out);
-        let mut encoder = png::Encoder::new(writer, width, height);
-        encoder.set_color(png::ColorType::Rgba);
-        encoder.set_depth(png::BitDepth::Eight);
-        // Default filter (None) + default compression (Level 6) keeps output
-        // byte-deterministic for identical RGBA inputs.
-        let mut writer = encoder
-            .write_header()
-            .expect("png header write (dimensions valid)");
-        writer
-            .write_image_data(&rgba)
-            .expect("png image data write (slice length matches header)");
-    }
-    out
+    crate::png::encode_rgba8(width, height, &rgba)
 }
 
 /// Same as [`encode_bgra_frame_to_png`] but returns a [`RenderError`] for the

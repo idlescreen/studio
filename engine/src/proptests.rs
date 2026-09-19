@@ -1,39 +1,72 @@
 //! Property tests for parse/plan protocol logic.
+//!
+//! Deterministic xorshift64 generators replace `proptest`: fixed seeds keep
+//! failures reproducible; coverage matches the old proptest cases.
+
+#[cfg(test)]
+mod rng {
+    /// xorshift64* — deterministic, seed-stamped in test names on failure.
+    pub struct Rng(pub u64);
+    impl Rng {
+        pub fn next(&mut self) -> u64 {
+            let mut x = self.0;
+            x ^= x >> 12;
+            x ^= x << 25;
+            x ^= x >> 27;
+            self.0 = x;
+            x.wrapping_mul(0x2545_F491_4F6C_DD1D)
+        }
+        /// Uniform in `lo..=hi` (hi >= lo).
+        pub fn range(&mut self, lo: u64, hi: u64) -> u64 {
+            lo + self.next() % (hi - lo + 1)
+        }
+    }
+}
 
 #[cfg(test)]
 mod duration_props {
+    use super::rng::Rng;
     use crate::duration::parse_duration_secs;
-    use proptest::prelude::*;
     use std::time::Duration;
 
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(64))]
-
-        #[test]
-        fn seconds_suffix_roundtrip(n in 1u64..=10_000) {
+    #[test]
+    fn seconds_suffix_roundtrip() {
+        let mut rng = Rng(0xD0A7_10C5_0001);
+        for _ in 0..64 {
+            let n = rng.range(1, 10_000);
             let d = parse_duration_secs(&format!("{n}s")).expect("parse");
-            prop_assert_eq!(d, Duration::from_secs(n));
+            assert_eq!(d, Duration::from_secs(n));
         }
+    }
 
-        #[test]
-        fn bare_number_is_seconds(n in 1u64..=10_000) {
+    #[test]
+    fn bare_number_is_seconds() {
+        let mut rng = Rng(0xD0A7_10C5_0002);
+        for _ in 0..64 {
+            let n = rng.range(1, 10_000);
             let d = parse_duration_secs(&n.to_string()).expect("parse");
-            prop_assert_eq!(d, Duration::from_secs(n));
+            assert_eq!(d, Duration::from_secs(n));
         }
+    }
 
-        #[test]
-        fn zero_always_errors(unit in prop::sample::select(vec!["", "s", "m", "h", "d"])) {
-            let raw = if unit.is_empty() { "0".into() } else { format!("0{unit}") };
-            prop_assert!(parse_duration_secs(&raw).is_err());
+    #[test]
+    fn zero_always_errors() {
+        for unit in ["", "s", "m", "h", "d"] {
+            let raw = if unit.is_empty() {
+                "0".to_string()
+            } else {
+                format!("0{unit}")
+            };
+            assert!(parse_duration_secs(&raw).is_err());
         }
     }
 }
 
 #[cfg(test)]
 mod segment_props {
+    use super::rng::Rng;
     use crate::models::RenderJob;
     use crate::segment::plan_segments;
-    use proptest::prelude::*;
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -67,17 +100,18 @@ mod segment_props {
         }
     }
 
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(48))]
-
-        #[test]
-        fn plan_len_matches_segment_count(total in 1u64..=50_000, seg in 1u64..=10_000) {
+    #[test]
+    fn plan_len_matches_segment_count() {
+        let mut rng = Rng(0x5E66_E07A_0003);
+        for _ in 0..48 {
+            let total = rng.range(1, 50_000);
+            let seg = rng.range(1, 10_000);
             let j = job(total, seg);
             let plans = plan_segments(&j).expect("plan");
-            prop_assert_eq!(plans.len() as u64, j.segment_count());
+            assert_eq!(plans.len() as u64, j.segment_count());
             let sum: u64 = plans.iter().map(|p| p.duration.as_secs()).sum();
             // saturating segments may overshoot last part only by covering total
-            prop_assert!(sum >= j.duration.as_secs() || plans.len() == 1);
+            assert!(sum >= j.duration.as_secs() || plans.len() == 1);
         }
     }
 }

@@ -1,13 +1,12 @@
 use crate::error::StudioError;
 use crate::job::StudioJob;
-use serde::{Deserialize, Serialize};
+use idle_render::json::Value;
 use std::fs;
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JobStatus {
     Pending,
     Running,
@@ -15,17 +14,88 @@ pub enum JobStatus {
     Failed,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl JobStatus {
+    /// serde `snake_case` wire name.
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Running => "running",
+            Self::Done => "done",
+            Self::Failed => "failed",
+        }
+    }
+    fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "pending" => Ok(Self::Pending),
+            "running" => Ok(Self::Running),
+            "done" => Ok(Self::Done),
+            "failed" => Ok(Self::Failed),
+            other => Err(format!("unknown job status '{other}'")),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct QueueEntry {
     pub job: StudioJob,
     pub status: JobStatus,
-    #[serde(default)]
     pub message: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+impl QueueEntry {
+    fn to_value(&self) -> Value {
+        Value::Object(vec![
+            ("job".into(), self.job.to_value()),
+            ("status".into(), Value::Str(self.status.as_str().into())),
+            ("message".into(), Value::Str(self.message.clone())),
+        ])
+    }
+    fn from_value(v: &Value) -> Result<Self, String> {
+        let job = v
+            .get("job")
+            .ok_or_else(|| "missing field `job`".to_string())
+            .and_then(|j| StudioJob::from_value(j))?;
+        let status = match v.get("status") {
+            Some(Value::Str(s)) => JobStatus::from_str(s)?,
+            Some(_) => return Err("invalid type for `status`: expected string".into()),
+            None => return Err("missing field `status`".into()),
+        };
+        let message = match v.get("message") {
+            None | Some(Value::Null) => String::new(),
+            Some(Value::Str(s)) => s.clone(),
+            Some(_) => return Err("invalid type for `message`: expected string".into()),
+        };
+        Ok(QueueEntry {
+            job,
+            status,
+            message,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct JobQueue {
     pub entries: Vec<QueueEntry>,
+}
+
+impl JobQueue {
+    fn to_value(&self) -> Value {
+        Value::Object(vec![(
+            "entries".into(),
+            Value::Array(self.entries.iter().map(QueueEntry::to_value).collect()),
+        )])
+    }
+    fn from_value(v: &Value) -> Result<Self, String> {
+        let entries = match v.get("entries") {
+            Some(Value::Array(items)) => items
+                .iter()
+                .map(QueueEntry::from_value)
+                .collect::<Result<Vec<_>, _>>()?,
+            Some(_) => return Err("invalid type for `entries`: expected array".into()),
+            None => return Err("missing field `entries`".into()),
+        };
+        Ok(JobQueue { entries })
+    }
 }
 
 impl JobQueue {
@@ -52,7 +122,8 @@ impl JobQueue {
                 path: path.to_path_buf(),
                 source,
             })?;
-        Ok(serde_json::from_str(&raw)?)
+        let v = idle_render::json::parse(&raw).map_err(|e| StudioError::Json(e.to_string()))?;
+        Self::from_value(&v).map_err(StudioError::Json)
     }
 
     /// Load, but recover from a corrupt queue: the unparseable file is moved
@@ -93,7 +164,7 @@ impl JobQueue {
                 source,
             })?;
         }
-        let raw = serde_json::to_string_pretty(self)?;
+        let raw = self.to_value().to_json_pretty();
         let tmp = path.with_extension("json.tmp");
         {
             let mut file = std::fs::OpenOptions::new()

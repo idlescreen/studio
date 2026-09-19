@@ -59,12 +59,7 @@ fn encode_one(
             let fps_eff = global as f64 / elapsed;
             let remain = frames_total.saturating_sub(index);
             let eta = remain as f64 / fps_eff.max(1e-6);
-            tracing::info!(
-                frame = global,
-                fps = format!("{fps_eff:.1}"),
-                eta_s = format!("{eta:.0}"),
-                "render progress"
-            );
+            crate::info!("render progress frame={global} fps={fps_eff:.1} eta_s={eta:.0}");
         }
         Some(Ok(pixels))
     });
@@ -112,10 +107,10 @@ pub fn run_pipeline(
     for plan in &plans {
         let part_frames = frames_for_duration(plan.duration, job.fps);
         if job.resume && segment_file_ready(&plan.path) {
-            tracing::info!(
-                segment = plan.index,
-                path = %plan.path.display(),
-                "resume: skip encode, fast-forward sim"
+            crate::info!(
+                "resume: skip encode, fast-forward sim segment={} path={}",
+                plan.index,
+                plan.path.display()
             );
             fast_forward(&mut session, part_frames, job.fps);
             written += part_frames;
@@ -140,11 +135,10 @@ pub fn run_pipeline(
         written += n;
         frame_offset += part_frames;
         part_paths.push(plan.path.clone());
-        tracing::info!(
-            segment = plan.index,
-            frames = n,
-            path = %plan.path.display(),
-            "segment done"
+        crate::info!(
+            "segment done segment={} frames={n} path={}",
+            plan.index,
+            plan.path.display()
         );
     }
 

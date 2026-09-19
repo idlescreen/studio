@@ -10,7 +10,7 @@ use idle_render::models::{Container, OutputFormat};
 use idle_render::pipeline::run_pipeline;
 use idle_render::pipeline_snapshot::SnapshotOutcome;
 use idle_render::EncodeBackend;
-use tempfile::tempdir;
+use snapshot_helpers::tempdir;
 
 mod snapshot_helpers;
 use snapshot_helpers::{bin_cli_check, make_job, plugin_path, six_scenarios, skip_if_missing};

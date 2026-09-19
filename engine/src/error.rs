@@ -1,25 +1,41 @@
 use std::path::PathBuf;
 
 /// Fallible render outcomes.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum RenderError {
-    #[error("invalid duration: {0}")]
     Duration(String),
-    #[error("invalid job: {0}")]
     Job(String),
-    #[error("plugin load failed: {0}")]
     Plugin(String),
-    #[error("font/raster unavailable: {0}")]
     Raster(String),
-    #[error("ffmpeg not found on PATH")]
     FfmpegMissing,
-    #[error("ffmpeg failed: {0}")]
     Ffmpeg(String),
-    #[error("io error on {path}: {source}")]
     Io {
         path: PathBuf,
         source: std::io::Error,
     },
-    #[error("encode cancelled or wrote zero frames")]
     EmptyOutput,
+}
+
+impl std::fmt::Display for RenderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Duration(m) => write!(f, "invalid duration: {m}"),
+            Self::Job(m) => write!(f, "invalid job: {m}"),
+            Self::Plugin(m) => write!(f, "plugin load failed: {m}"),
+            Self::Raster(m) => write!(f, "font/raster unavailable: {m}"),
+            Self::FfmpegMissing => write!(f, "ffmpeg not found on PATH"),
+            Self::Ffmpeg(m) => write!(f, "ffmpeg failed: {m}"),
+            Self::Io { path, source } => write!(f, "io error on {}: {source}", path.display()),
+            Self::EmptyOutput => write!(f, "encode cancelled or wrote zero frames"),
+        }
+    }
+}
+
+impl std::error::Error for RenderError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io { source, .. } => Some(source),
+            _ => None,
+        }
+    }
 }

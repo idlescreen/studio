@@ -36,6 +36,14 @@ resolver = "2"
 authors = ["idlescreen developers"]
 repository = "https://github.com/idlescreen/studio"
 
+# `idle-render` is the offline export path that fans savers through ffmpeg
+# to AV1. It can run for hours per render at 1920×1080 and burns the same
+# per-pixel work the runtime daemon does, just batched.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
 [package.metadata.deb]
 name = "idle-studio"
 copyright = "2026 IdleScreen"

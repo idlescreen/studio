@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "idle-studio"
-version = "1.3.6"
+version = "1.3.7"
 dependencies = [
  "crossterm",
  "libc",
@@ -2205,6 +2205,7 @@ version = "0.4.0"
 dependencies = [
  "idle-log",
  "libc",
+ "parking_lot",
  "wayland-client",
  "wayland-protocols",
  "wayland-protocols-wlr",

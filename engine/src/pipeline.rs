@@ -1,3 +1,4 @@
+// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: test
 use crate::audio::mux_audio_bed;
 use crate::encode::{encode_raw_bgra_to_file, EncodeBackend, EncodeSettings};
 use crate::error::RenderError;

@@ -1,3 +1,4 @@
+// perf: T3 · metric: iterative; cost scales with its input, not with a fixed bound · check: review
 use crate::job::StudioJob;
 use crate::queue::{JobQueue, JobStatus};
 use crate::runner::RunningJob;

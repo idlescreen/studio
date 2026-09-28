@@ -1,3 +1,4 @@
+// perf: T3 · metric: spawns a subprocess; cost is dominated by fork/exec, not by this page · check: test
 //! Segment planning and ffmpeg concat for long encodes.
 
 use crate::error::RenderError;

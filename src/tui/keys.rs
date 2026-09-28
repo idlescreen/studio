@@ -1,3 +1,4 @@
+// perf: T3 · metric: iterative; cost scales with its input, not with a fixed bound · check: review
 //! Key handling for both TUI screens — kept separate so mod.rs stays a
 //! small event pump under the line cap.
 

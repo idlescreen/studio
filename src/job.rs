@@ -1,3 +1,4 @@
+// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: test
 //! Studio queue entry = render [`JobSpec`] + id.
 //!
 //! Studio does not reimplement export. It stores jobs and asks `render` to run them.

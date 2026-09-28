@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// perf: T3 · metric: contains unsafe; cost depends on what the caller passes in · check: review
 
 //! Pipeline setup helpers: export env, plugin resolution, encoder settings,
 //! frame counting, and resume fast-forward.

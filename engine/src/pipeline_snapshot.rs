@@ -1,3 +1,4 @@
+// perf: T3 · metric: touches the filesystem; dominated by syscall latency, not by this page's logic · check: test
 //! Snapshot flow for `--snapshot-last-only`.
 //!
 //! When `job.snapshot_last_only` + `job.baseline_dir` are both set, the

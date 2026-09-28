@@ -1,3 +1,4 @@
+// perf: T3 · metric: touches the filesystem; dominated by syscall latency, not by this page's logic · check: test
 //! Verify the in-repo PNG decoder against committed baseline fixtures.
 //! (Kept as a permanent regression test for the hand-rolled inflate path.)
 

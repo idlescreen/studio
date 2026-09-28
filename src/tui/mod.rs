@@ -1,3 +1,4 @@
+// perf: T3 · metric: iterative; cost scales with its input, not with a fixed bound · check: review
 //! Director TUI — primary way to use IdleScreen Studio.
 //!
 //! Queue jobs, edit export params, run `render`, watch status. No GUI required.

@@ -1,3 +1,4 @@
+// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: test
 //! AV1 + H.264 encoder discovery and quality-flag mapping.
 //!
 //! Encoder-probe helpers (`probe_encoder`, `detect_av1_encoder`,

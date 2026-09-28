@@ -1,3 +1,4 @@
+// perf: T3 · metric: touches the filesystem; dominated by syscall latency, not by this page's logic · check: review
 //! JSON job contract for Studio (and any other driver).
 //!
 //! Studio writes this file; `render --job-file` runs it. Capability lives here.

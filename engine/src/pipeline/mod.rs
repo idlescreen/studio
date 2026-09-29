@@ -1,17 +1,21 @@
+pub mod compare;
+pub mod segment;
+mod setup;
+pub mod snapshot;
+
+pub use setup::export_seed_env;
+use setup::{encode_settings, fast_forward, frames_for_duration, resolve_plugin};
+
 use crate::audio::mux_audio_bed;
 use crate::encode::{encode_raw_bgra_to_file, EncodeBackend, EncodeSettings};
 use crate::error::RenderError;
 use crate::models::RenderJob;
 use crate::paths::ensure_parent_dir;
-use crate::pipeline_snapshot::SnapshotOutcome;
-use crate::segment::{concat_segments, plan_segments, segment_file_ready};
 use idle_runner::plugin_session::PluginSession;
+use segment::{concat_segments, plan_segments, segment_file_ready};
+use snapshot::SnapshotOutcome;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-
-mod setup;
-pub use setup::export_seed_env;
-use setup::{encode_settings, fast_forward, frames_for_duration, resolve_plugin};
 
 /// Outcome of a finished (or dry-run) pipeline.
 #[derive(Debug, Clone)]
@@ -150,7 +154,7 @@ pub fn run_pipeline(
         mux_audio_bed(&job.output, audio, &job.output)?;
     }
 
-    let snapshot = crate::pipeline_snapshot::run_snapshot(job)?;
+    let snapshot = snapshot::run_snapshot(job)?;
     Ok(PipelineResult {
         frames: written,
         output: job.output.clone(),

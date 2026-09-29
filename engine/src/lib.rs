@@ -7,8 +7,6 @@ pub mod audio;
 pub mod cli;
 pub mod duration;
 pub mod encode;
-pub mod encode_select;
-pub mod encoder_probe;
 pub mod error;
 pub mod job_spec;
 pub mod json;
@@ -16,11 +14,14 @@ pub mod log;
 pub mod models;
 pub mod paths;
 pub mod pipeline;
-pub mod pipeline_snapshot;
 pub mod png;
-pub mod png_writer;
-pub mod segment;
-pub mod snapshot;
+
+pub use encode::probe as encoder_probe;
+pub use encode::select as encode_select;
+pub use pipeline::compare as snapshot;
+pub use pipeline::segment;
+pub use pipeline::snapshot as pipeline_snapshot;
+pub use png::writer as png_writer;
 
 pub use duration::parse_duration_secs;
 pub use encode::{encode_raw_bgra_to_file, EncodeBackend, EncodeSettings};

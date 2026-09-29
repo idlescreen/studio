@@ -1,9 +1,12 @@
-use crate::encode_select::{detect_av1_encoder, detect_h264_encoder};
+pub mod probe;
+pub mod select;
+
+use select::{detect_av1_encoder, detect_h264_encoder};
 use crate::error::RenderError;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-pub use crate::encode_select::{EncodeSettings, HW_AV1_CANDIDATES, SW_AV1_CANDIDATES};
+pub use select::{EncodeSettings, HW_AV1_CANDIDATES, SW_AV1_CANDIDATES};
 
 /// Legacy alias used in docs/tests.
 pub const AV1_CANDIDATES: &[&str] = &[

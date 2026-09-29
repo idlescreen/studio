@@ -8,7 +8,7 @@
 
 use crate::error::RenderError;
 use crate::models::RenderJob;
-use crate::snapshot;
+use super::compare as snapshot;
 use std::path::PathBuf;
 
 /// Outcome of a snapshot compare (or update) pass.

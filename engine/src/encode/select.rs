@@ -7,7 +7,7 @@
 //! this file used to hit the project's 256-line cap, so the probe helpers
 //! were extracted for headroom.
 
-pub use crate::encoder_probe::{
+pub use super::probe::{
     detect_av1_encoder, detect_h264_encoder, probe_encoder, probe_quality_args,
     push_h264_quality_args, push_quality_args,
 };

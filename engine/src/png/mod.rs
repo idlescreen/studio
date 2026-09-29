@@ -10,10 +10,12 @@
 mod decode;
 mod deflate;
 mod inflate;
+pub mod writer;
 
 pub use decode::decode_rgba8;
 pub(crate) use deflate::*;
 pub(crate) use inflate::*;
+pub use writer::*;
 
 const SIG: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
 
@@ -114,5 +116,5 @@ pub(crate) fn paeth(a: u8, b: u8, c: u8) -> u8 {
 /// Supports non-interlaced 8-bit gray (0), gray+alpha (4), RGB (2), and
 /// RGBA (6) — the formats any sane encoder emits for opaque/alpha content.
 #[cfg(test)]
-#[path = "png_tests.rs"]
+#[path = "tests.rs"]
 mod tests;

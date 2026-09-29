@@ -14,5 +14,5 @@ pub(crate) use value::*;
 pub use value::{Error, Value};
 
 #[cfg(test)]
-#[path = "json_tests.rs"]
+#[path = "tests.rs"]
 mod tests;

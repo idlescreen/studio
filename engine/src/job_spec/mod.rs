@@ -109,5 +109,5 @@ impl JobSpec {
 }
 
 #[cfg(test)]
-#[path = "job_spec_tests.rs"]
+#[path = "tests.rs"]
 mod tests;

@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-// perf: T3 · metric: touches the filesystem; dominated by syscall latency, not by this page's logic · check: review
 
 use super::*;
 

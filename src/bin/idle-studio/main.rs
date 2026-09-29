@@ -1,4 +1,3 @@
-// perf: T3 · metric: iterative; cost scales with its input, not with a fixed bound · check: review
 //! idle-studio — **TUI-first** UI that drives the render capability.
 
 use idle_render::JobSpec;

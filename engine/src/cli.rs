@@ -1,4 +1,3 @@
-// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: review
 use crate::duration::parse_duration_secs;
 use crate::encode::EncodeBackend;
 use crate::error::RenderError;

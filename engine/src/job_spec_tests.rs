@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-// perf: T3 · metric: test-only page, not compiled into the shipped binary · check: test
 
 //! JobSpec parse/serialize/convert tests.
 

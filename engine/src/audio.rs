@@ -1,4 +1,3 @@
-// perf: T3 · metric: spawns a subprocess; cost is dominated by fork/exec, not by this page · check: test
 //! Mux optional audio bed under a finished video master.
 
 use crate::error::RenderError;

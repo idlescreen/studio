@@ -1,4 +1,3 @@
-// perf: T3 · metric: crate root; holds re-exports and wiring, not hot-path logic · check: review
 //! IdleScreen **render** — offline export capability (library + `render` CLI).
 //!
 //! Studio is the UI; it drives this crate via [`JobSpec`] / `render --job-file`.

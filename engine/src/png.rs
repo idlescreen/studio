@@ -1,4 +1,3 @@
-// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: review
 //! Self-contained PNG codec: RGBA8 encode + decode.
 //!
 //! Replaces the `png` crate. Encoder emits zlib/DEFLATE (greedy LZ77 with

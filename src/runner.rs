@@ -1,4 +1,3 @@
-// perf: T3 · metric: spawns a subprocess; cost is dominated by fork/exec, not by this page · check: review
 //! Drive the **render** capability (same repo) as a subprocess.
 
 use crate::error::StudioError;

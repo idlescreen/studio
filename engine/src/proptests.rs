@@ -1,4 +1,3 @@
-// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: test
 //! Property tests for parse/plan protocol logic.
 //!
 //! Deterministic xorshift64 generators replace `proptest`: fixed seeds keep

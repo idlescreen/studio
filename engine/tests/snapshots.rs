@@ -1,4 +1,3 @@
-// perf: T3 · metric: spawns a subprocess; cost is dominated by fork/exec, not by this page · check: test
 //! Snapshot baseline regression tests for the render CLI (Sprint 02).
 //!
 //! Each test picks a small `<scenario>` (effect/seed/duration/fps) and asserts

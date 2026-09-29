@@ -1,4 +1,3 @@
-// perf: T3 · metric: touches the filesystem; dominated by syscall latency, not by this page's logic · check: review
 use crate::error::StudioError;
 use crate::job::StudioJob;
 use idle_render::json::Value;

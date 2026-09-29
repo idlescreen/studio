@@ -1,4 +1,3 @@
-// perf: T3 · metric: allocates on the call path; cost scales with allocation count · check: review
 use crate::queue::{JobQueue, JobStatus};
 use crate::tui::form::{FormField, NewJobForm, FORM_FIELDS};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};

@@ -1,4 +1,3 @@
-// perf: T3 · metric: crate root; holds re-exports and wiring, not hot-path logic · check: review
 //! IdleScreen Studio — UI that drives the **render** capability.
 //!
 //! Export work is done by `render` via `JobSpec` / `--job-file`. Studio only queues and launches.

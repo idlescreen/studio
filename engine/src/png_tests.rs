@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-// perf: T3 · metric: test-only page, not compiled into the shipped binary · check: test
 
 use super::*;
 
@@ -9,7 +8,7 @@ fn encode_decode_roundtrip() {
     let (w, h) = (64u32, 32u32);
     let mut rgba = vec![0u8; (w * h * 4) as usize];
     let mut s = 0x1234_5678u64;
-    for (i, px) in rgba.chunks_exact_mut(4).enumerate() {
+    for (i, px) in rgba.as_chunks_mut::<4>().0.iter_mut().enumerate() {
         s ^= s << 13;
         s ^= s >> 7;
         s ^= s << 17;

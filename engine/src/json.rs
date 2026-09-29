@@ -1,4 +1,3 @@
-// perf: T3 · metric: bounded single-pass work; no syscalls, no locks, no allocation on the steady path · check: review
 //! Minimal JSON parse/serialize for the studio job/queue schemas.
 //!
 //! Replaces `serde_json`: ordered objects, exact u64/i64 integers, recursion

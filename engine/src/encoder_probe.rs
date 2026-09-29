@@ -1,4 +1,3 @@
-// perf: T3 · metric: spawns a subprocess; cost is dominated by fork/exec, not by this page · check: test
 //! Encoder-probe helpers extracted from `encode_select.rs`.
 //!
 //! These functions used to live alongside the main encode-backend dispatch

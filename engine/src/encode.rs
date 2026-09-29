@@ -1,4 +1,3 @@
-// perf: T3 · metric: lock-sensitive; cost depends on contention the caller creates · check: test
 use crate::encode_select::{detect_av1_encoder, detect_h264_encoder};
 use crate::error::RenderError;
 use std::io::Write;

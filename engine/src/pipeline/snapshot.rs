@@ -6,9 +6,9 @@
 //! `job.update_baselines` is set). Returns [`SnapshotOutcome`] so the caller
 //! can print a summary line and exit non-zero on mismatch.
 
+use super::compare as snapshot;
 use crate::error::RenderError;
 use crate::models::RenderJob;
-use super::compare as snapshot;
 use std::path::PathBuf;
 
 /// Outcome of a snapshot compare (or update) pass.

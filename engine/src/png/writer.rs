@@ -23,7 +23,12 @@ pub fn encode_bgra_frame_to_png(width: u32, height: u32, bgra: &[u8]) -> Vec<u8>
     // RGBA8 output buffer: swap B and R channels on the fly.
     let pixels = width as usize * height as usize;
     let mut rgba = vec![0u8; pixels * 4];
-    for (src, dst) in bgra.as_chunks::<4>().0.iter().zip(rgba.as_chunks_mut::<4>().0.iter_mut()) {
+    for (src, dst) in bgra
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(rgba.as_chunks_mut::<4>().0.iter_mut())
+    {
         dst[0] = src[2]; // R ← B
         dst[1] = src[1]; // G ← G
         dst[2] = src[0]; // B ← R

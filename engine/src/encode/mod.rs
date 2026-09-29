@@ -1,8 +1,8 @@
 pub mod probe;
 pub mod select;
 
-use select::{detect_av1_encoder, detect_h264_encoder};
 use crate::error::RenderError;
+use select::{detect_av1_encoder, detect_h264_encoder};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 

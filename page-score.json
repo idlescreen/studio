@@ -1,6 +1,6 @@
 {
  "repo": "studio",
- "rev": "9ddf9d3",
+ "rev": "01a7682",
  "dirty": true,
  "pages": [
   {
@@ -222,7 +222,7 @@
   },
   {
    "path": "./engine/src/png/decode.rs",
-   "lines": 161,
+   "lines": 169,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 1
@@ -236,7 +236,7 @@
   },
   {
    "path": "./engine/src/png/inflate.rs",
-   "lines": 245,
+   "lines": 248,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 1

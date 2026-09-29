@@ -12,7 +12,11 @@ pub fn decode_rgba8(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
     let mut palette: Vec<u8> = Vec::new();
     let mut trns: Vec<u8> = Vec::new();
     while pos + 12 <= bytes.len() {
-        let len = u32::from_be_bytes(bytes[pos..pos + 4].try_into().unwrap()) as usize;
+        let len = u32::from_be_bytes(
+            bytes[pos..pos + 4]
+                .try_into()
+                .map_err(|_| "png: invalid chunk length header")?,
+        ) as usize;
         let kind = &bytes[pos + 4..pos + 8];
         let data_start = pos + 8;
         let data_end = data_start + len;
@@ -20,7 +24,11 @@ pub fn decode_rgba8(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
             return Err("png: truncated chunk".into());
         }
         let data = &bytes[data_start..data_end];
-        let crc = u32::from_be_bytes(bytes[data_end..data_end + 4].try_into().unwrap());
+        let crc = u32::from_be_bytes(
+            bytes[data_end..data_end + 4]
+                .try_into()
+                .map_err(|_| "png: invalid chunk crc")?,
+        );
         let mut crc_data = Vec::with_capacity(4 + len);
         crc_data.extend_from_slice(kind);
         crc_data.extend_from_slice(data);
@@ -35,8 +43,8 @@ pub fn decode_rgba8(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
                 if len != 13 {
                     return Err("png: bad IHDR".into());
                 }
-                w = u32::from_be_bytes(data[0..4].try_into().unwrap());
-                h = u32::from_be_bytes(data[4..8].try_into().unwrap());
+                w = u32::from_be_bytes(data[0..4].try_into().map_err(|_| "png: bad IHDR width")?);
+                h = u32::from_be_bytes(data[4..8].try_into().map_err(|_| "png: bad IHDR height")?);
                 depth = data[8];
                 color = data[9];
                 if data[10] != 0 || data[11] != 0 {

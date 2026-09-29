@@ -234,7 +234,10 @@ pub fn zlib_decode(data: &[u8]) -> Result<Vec<u8>, String> {
     let mut out = Vec::new();
     inflate(&mut r, &mut out)?;
     if data.len() >= 6 {
-        let expect = u32::from_be_bytes(data[data.len() - 4..].try_into().unwrap());
+        let checksum: [u8; 4] = data[data.len() - 4..]
+            .try_into()
+            .map_err(|_| "zlib: truncated checksum")?;
+        let expect = u32::from_be_bytes(checksum);
         if adler32(&out) != expect {
             return Err("zlib: adler32 mismatch".into());
         }

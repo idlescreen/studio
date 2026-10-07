@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const EFFECTS: &[&str] = &[
-    "aurora", "beams", "bursts", "chaos", "cosmos", "glyphs", "gnats", "hearth", "radar", "ripple",
-    "storm",
+    "ascii", "aurora", "beams", "bursts", "chaos", "cosmos", "glyphs", "gnats", "hearth", "radar",
+    "ripple", "storm",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -199,7 +199,7 @@ mod tests {
     fn to_job_spec_parses() {
         let f = NewJobForm::default();
         let s = f.to_job_spec().expect("spec");
-        assert_eq!(s.effect, "aurora");
+        assert_eq!(s.effect, "ascii");
         assert_eq!(s.width, 1280);
         assert_eq!(s.fps, 30);
     }

@@ -32,10 +32,14 @@ queueing and tuning export jobs. Part of
 [IdleScreen](https://idlescreen.github.io) — modular Wayland screensavers
 for Linux.
 
-## Install
+## Build & Run
+
+Build from the studio repository:
 
 ```sh
-idlescreen install studio
+git clone https://github.com/idlescreen/studio
+cd studio
+cargo build --release
 ```
 
 ## Commands

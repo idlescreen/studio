@@ -1,5 +1,6 @@
 pub mod compare;
 pub mod segment;
+pub mod session;
 mod setup;
 pub mod snapshot;
 
@@ -11,8 +12,8 @@ use crate::encode::{encode_raw_bgra_to_file, EncodeBackend, EncodeSettings};
 use crate::error::RenderError;
 use crate::models::RenderJob;
 use crate::paths::ensure_parent_dir;
-use idle_runner::plugin_session::PluginSession;
 use segment::{concat_segments, plan_segments, segment_file_ready};
+use session::PluginSession;
 use snapshot::SnapshotOutcome;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};

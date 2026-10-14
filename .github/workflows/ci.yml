@@ -29,11 +29,6 @@ jobs:
     needs: fmt
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: Checkout runtime engine (path deps)
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        repository: idlescreen/runtime
-        path: runtime
     - name: System deps
       run: |
         sudo apt-get update
@@ -49,17 +44,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: clippy
-    # A deadlocked test must fail the build, not burn a runner for the
-    # 6-hour default. See runtime's
-    # `apply_commands_drains_channel_until_empty` incident.
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: Checkout runtime engine (path deps)
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        repository: idlescreen/runtime
-        path: runtime
     - name: System deps
       run: |
         sudo apt-get update
@@ -76,11 +63,6 @@ jobs:
     needs: test
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: Checkout runtime engine (path deps)
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        repository: idlescreen/runtime
-        path: runtime
     - name: System deps
       run: |
         sudo apt-get update
@@ -97,11 +79,6 @@ jobs:
     needs: test
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: Checkout runtime engine (path deps)
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        repository: idlescreen/runtime
-        path: runtime
     - name: System deps
       run: |
         sudo apt-get update
@@ -111,9 +88,6 @@ jobs:
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.96.0
         echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
     - name: MSRV build (1.96.0)
-      # Real gate: the workspace must build on the pinned floor toolchain.
-      # (1.75 is impossible — idle-api is edition-2024; the previous job
-      # self-skipped with `|| true` and gated nothing.)
       run: cargo build --workspace --all-targets
 
   docs:
@@ -131,12 +105,6 @@ jobs:
         markdown-link-check README.md
 
   bootstrap:
-    # Guards the `runtime/` symlink in bootstrap.sh. studio/engine/Cargo.toml
-    # declares `idle-runner = { path = "../runtime/idle-runner" }` (resolved
-    # from engine/), so the engine checkout must be reachable as `runtime/`
-    # inside this repo. CI's other jobs check the engine out there; locally
-    # it is a gitignored symlink to the sibling clone. This job checks out
-    # studio ONLY and runs the real script.
     name: bootstrap on a clean checkout
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -147,34 +115,16 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           rustup show || true
-      - name: No pre-existing engine checkout
-        run: |
-          if [ -e runtime ]; then
-            echo "::error::runtime/ already exists — this job must start from a bare checkout"
-            exit 1
-          fi
       - name: Run bootstrap.sh
         run: ./bootstrap.sh
-      - name: The link exists where engine's Cargo.toml expects it
+      - name: Verify metadata
         run: |
-          test -e runtime/idle-runner/Cargo.toml \
-            || { echo "::error::bootstrap.sh did not produce runtime/idle-runner"; exit 1; }
           cargo metadata --format-version 1 --manifest-path engine/Cargo.toml >/dev/null
-          echo "bootstrap produced a resolvable runtime/ path dep for engine"
 
   deny:
-    # This repo had no deny.toml at all, and `runtime`'s CI ran
-    # `cargo deny check advisories licenses` — skipping the `sources` section
-    # where unknown-registry/unknown-git are denied, i.e. the typosquat
-    # control. This runs the bare form: advisories, licenses, bans, sources.
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: Checkout runtime engine (path deps)
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        repository: idlescreen/runtime
-        path: runtime
     - name: Install cargo-deny
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash

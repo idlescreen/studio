@@ -3,10 +3,10 @@
 //! Pipeline setup helpers: export env, plugin resolution, encoder settings,
 //! frame counting, and resume fast-forward.
 
+use super::session::{LaunchMode, PluginSession};
 use crate::encode::EncodeSettings;
 use crate::error::RenderError;
 use crate::models::RenderJob;
-use idle_runner::plugin_session::PluginSession;
 use std::time::Duration;
 
 pub fn export_seed_env(seed: u64) {
@@ -25,19 +25,14 @@ pub fn export_seed_env(seed: u64) {
 }
 
 pub(super) fn resolve_plugin(job: &RenderJob) -> Result<PluginSession, RenderError> {
-    // job.gpu_upscale is retained on JobSpec for file back-compat but the
-    // GPU path was removed in idle-runner 3.4 — it no longer reaches plugins.
+    // job.gpu_upscale is retained on JobSpec for file back-compat.
     let scale = Some(1.0_f32);
     if let Some(path) = &job.plugin_path {
         return PluginSession::load_path_with_options(path, scale)
             .map_err(|e| RenderError::Plugin(e.to_string()));
     }
-    PluginSession::load_with_options(
-        &job.effect,
-        &idle_runner::launcher::LaunchMode::Preview,
-        scale,
-    )
-    .map_err(|e| RenderError::Plugin(e.to_string()))
+    PluginSession::load_with_options(&job.effect, &LaunchMode::Preview, scale)
+        .map_err(|e| RenderError::Plugin(e.to_string()))
 }
 
 pub(super) fn encode_settings(job: &RenderJob) -> EncodeSettings {

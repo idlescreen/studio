@@ -1,6 +1,6 @@
 {
  "repo": "studio",
- "rev": "01a7682",
+ "rev": "74ec5b5",
  "dirty": true,
  "pages": [
   {
@@ -50,7 +50,7 @@
    "lines": 130,
    "bin_bytes": null,
    "heat_pct": null,
-   "reach": 3
+   "reach": 4
   },
   {
    "path": "./engine/src/duration.rs",
@@ -194,7 +194,7 @@
   },
   {
    "path": "./engine/src/pipeline/mod.rs",
-   "lines": 212,
+   "lines": 213,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -207,8 +207,15 @@
    "reach": 3
   },
   {
+   "path": "./engine/src/pipeline/session.rs",
+   "lines": 111,
+   "bin_bytes": null,
+   "heat_pct": null,
+   "reach": 2
+  },
+  {
    "path": "./engine/src/pipeline/setup.rs",
-   "lines": 64,
+   "lines": 59,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 1

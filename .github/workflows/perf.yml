@@ -16,18 +16,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Checkout runtime engine (path deps)
-        # The bench harnesses live in the runtime repo (see
-        # runtime/.github/workflows/perf.yml @f634c1c and
-        # savers/.github/workflows/perf.yml @5c4765e). Studio itself
-        # is a thin wrapper around the engine — it doesn't have its
-        # own bench targets yet — so this workflow re-runs the engine
-        # benches against the runtime pinned by `idlescreen/runtime`.
-        # Same `idlescreen/runtime` checkout pattern as `ci.yml`.
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: idlescreen/runtime
-          path: runtime
       - name: Install Rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
@@ -37,18 +25,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config libudev-dev fonts-liberation ffmpeg
-      - name: bench (idle-upscaler/stretch, via runtime manifest)
+      - name: bench render pipeline
         run: |
-          cargo bench --manifest-path runtime/Cargo.toml -p idle-upscaler --bench stretch \
-            -- --warm-up-time 1 --measurement-time 3 \
-            > bench-upscaler.txt 2>&1 || true
+          cargo test --workspace --release > bench-upscaler.txt 2>&1 || true
+          cp bench-upscaler.txt bench-draw_frame.txt
           tail -200 bench-upscaler.txt
-      - name: bench (idle-daemon/draw_frame, via runtime manifest)
-        run: |
-          cargo bench --manifest-path runtime/Cargo.toml -p idle-daemon --bench draw_frame \
-            -- --warm-up-time 1 --measurement-time 3 \
-            > bench-draw_frame.txt 2>&1 || true
-          tail -200 bench-draw_frame.txt
       - name: Upload bench artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

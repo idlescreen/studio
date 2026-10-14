@@ -26,27 +26,31 @@
 
 </div>
 
-Offline saver → video rendering: the `render` engine (headless sim →
+Offline saver → video rendering: the `render` engine (headless simulation →
 AV1/H.264/PNG/raw via ffmpeg) plus `idle-studio`, the Director TUI for
-queueing and tuning export jobs. Part of
-[IdleScreen](https://idlescreen.github.io) — modular Wayland screensavers
-for Linux.
+queueing and tuning export jobs. Companion to the
+[IdleScreen](https://idlescreen.github.io) (`v4.2.0`) monorepo — high-performance
+Wayland screensaver and idle management suite for Linux (First-Class SuperFedora
+integration, 37 in-tree ASCII effects + 11 mathematical savers, `wp_viewporter`
+1x native grid GPU scaling, and multi-init support across `systemd`, `OpenRC`,
+`runit`, `s6`, `dinit`, and XDG autostart).
 
 ## Build & Run
 
-Build from the studio repository:
+Build from the studio repository (with optional `target-cpu=native` SIMD tuning):
 
 ```sh
 git clone https://github.com/idlescreen/studio
 cd studio
-cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --release --workspace
 ```
 
 ## Commands
 
 ```sh
-idlescreen studio                             # Director TUI: queue + tune jobs
-render -e beams --duration 30s -o out.mkv     # headless render → AV1/Matroska
+idle-studio                                   # Director TUI: queue + tune export jobs
+render -e ascii --duration 30s -o out.mkv     # headless ASCII banner/effect → AV1/Matroska
+render -e beams --duration 30s -o out.mkv     # headless mathematical saver → AV1/Matroska
 render -e ripple --format png -o frames/      # one PNG per frame
 ```
 

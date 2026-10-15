@@ -12,7 +12,7 @@ SCORE="${1:-page-score.json}"
 cd "$ROOT" || exit 1
 [ -f "$SCORE" ] || { echo "FAIL: $SCORE not found (run qa/page_score.sh first)"; exit 1; }
 
-find . -name '*.rs' -not -path '*/target/*' -not -path '*/.git/*' -not -path './runtime/*' -not -path './downstream/*' | sort > /tmp/pages.check.$$
+find . -name '*.rs' -not -path '*/target/*' -not -path '*/.git/*' | sort > /tmp/pages.check.$$
 trap 'rm -f /tmp/pages.check.$$' EXIT
 
 python3 - "$SCORE" /tmp/pages.check.$$ <<'EOF'
@@ -104,6 +104,18 @@ for p in pages:
     elif lines < 16 and not is_shim(path):
         sizing_bad.append(f"{path} ({lines} < 16, not shim)")
 check("page-size", not sizing_bad, f"{len(sizing_bad)} bad entries, e.g. {sizing_bad[:3]}")
+
+# 7. Directory density: at most 8 .rs files per directory.
+by_dir = defaultdict(list)
+for p in pages:
+    by_dir[os.path.dirname(p.get("path", ""))].append(p.get("path", ""))
+density_bad = [f"{d} ({len(fs)} > 8)" for d, fs in sorted(by_dir.items()) if len(fs) > 8]
+check("dir-density", not density_bad, f"{len(density_bad)} crowded dirs, e.g. {density_bad[:3]}")
+
+# 8. Banned file names.
+BANNED = {"util.rs", "utils.rs", "helper.rs", "helpers.rs", "common.rs", "misc.rs", "shared.rs", "base.rs", "core.rs"}
+banned_bad = [p.get("path", "") for p in pages if os.path.basename(p.get("path", "")) in BANNED]
+check("banned-names", not banned_bad, f"{len(banned_bad)} banned files, e.g. {banned_bad[:3]}")
 
 sys.exit(1 if fails else 0)
 EOF

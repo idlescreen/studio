@@ -28,7 +28,7 @@ TMP="$(mktemp -d /tmp/page-score.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 
 # ---- pages + lines (exact) ----
-find . -name '*.rs' -not -path '*/target/*' -not -path '*/.git/*' -not -path './runtime/*' -not -path './downstream/*' | sort > "$TMP/pages.txt"
+find . -name '*.rs' -not -path '*/target/*' -not -path '*/.git/*' | sort > "$TMP/pages.txt"
 : > "$TMP/lines.tsv"
 while IFS= read -r f; do
   printf '%s\t%s\n' "$f" "$(wc -l < "$f")" >> "$TMP/lines.tsv"
@@ -89,10 +89,10 @@ for p in m.get('packages', []):
 print(' '.join(sorted(names)))" "$TMP")"
     if [ -n "$MEMBERS" ]; then
       MEMBER_RE="/lib($(echo "$MEMBERS" | tr ' ' '|'))-[0-9a-f]+\.rlib$"
-      RLIBS="$(ls -t target/debug/deps/*.rlib 2>/dev/null | grep -E "$MEMBER_RE")"
+      RLIBS="$(ls -t target/debug/deps/*.rlib target/*/debug/deps/*.rlib 2>/dev/null | grep -E "$MEMBER_RE")"
     else
       NOTES="$NOTES bin rlib filter off (no cargo metadata);"
-      RLIBS="$(ls -t target/debug/deps/*.rlib 2>/dev/null)"
+      RLIBS="$(ls -t target/debug/deps/*.rlib target/*/debug/deps/*.rlib 2>/dev/null)"
     fi
     # One rlib per crate: newest first that was actually built from this
     # repo's sources (deps/ and registry-built same-name rlibs exist from
@@ -100,7 +100,7 @@ print(' '.join(sorted(names)))" "$TMP")"
     declare -A SEEN_CRATE
     for rlib in $RLIBS; do
       [ -f "$rlib" ] || continue
-      key="$(echo "$rlib" | awk -F'[-.]' '{k=""; for(i=1;i<NF-1;i++) k=k $i "-"; print k}')"
+      key="$(basename "$rlib" | awk -F'[-.]' '{k=""; for(i=1;i<NF-1;i++) k=k $i "-"; print k}')"
       [ -n "${SEEN_CRATE[$key]:-}" ] && continue
       if nm --print-size --line-numbers "$rlib" 2>/dev/null | grep -q -E -e "$ROOT" -e '/target/package/'; then
         SEEN_CRATE[$key]=1

@@ -1,5 +1,7 @@
 //! idle-studio — **TUI-first** UI that drives the render capability.
 
+#![deny(unsafe_code)]
+
 use idle_render::JobSpec;
 use idle_studio::job::StudioJob;
 use idle_studio::queue::{default_queue_path, JobQueue, JobStatus};
@@ -74,7 +76,10 @@ fn main() -> ExitCode {
         }
     };
 
-    match args.cmd.expect("subcommand present") {
+    let Some(cmd) = args.cmd else {
+        return ExitCode::SUCCESS;
+    };
+    match cmd {
         Cmd::Tui => ExitCode::SUCCESS,
         Cmd::Enqueue {
             effect,

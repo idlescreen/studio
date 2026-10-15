@@ -3,6 +3,8 @@
 //! Studio is the UI; it drives this crate via [`JobSpec`] / `render --job-file`.
 //! Frame resize (upscale) is an internal step of the pipeline, not a separate product.
 
+#![deny(unsafe_code)]
+
 pub mod audio;
 pub mod cli;
 pub mod duration;

@@ -3,6 +3,8 @@
 //! Export work is done by `render` via `JobSpec` / `--job-file`. Studio only queues and launches.
 //! `render` resolves via the `./render` sibling symlink (see .gitignore) or PATH.
 
+#![deny(unsafe_code)]
+
 pub mod error;
 pub mod job;
 pub mod queue;

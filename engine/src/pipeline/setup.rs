@@ -3,6 +3,8 @@
 //! Pipeline setup helpers: export env, plugin resolution, encoder settings,
 //! frame counting, and resume fast-forward.
 
+#![allow(unsafe_code)]
+
 use super::session::{LaunchMode, PluginSession};
 use crate::encode::EncodeSettings;
 use crate::error::RenderError;

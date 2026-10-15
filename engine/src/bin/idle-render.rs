@@ -1,5 +1,7 @@
 //! render — offline IdleScreen exporter.
 
+#![deny(unsafe_code)]
+
 use idle_render::cli::Args;
 use idle_render::models::{Container, OutputFormat};
 use idle_render::pipeline::run_pipeline;

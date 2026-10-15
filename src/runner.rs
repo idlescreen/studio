@@ -106,8 +106,16 @@ impl RunningJob {
                 return Err(StudioError::Render(format!("spawn {}: {e}", bin.display())));
             }
         };
-        let (_oh, out_rx) = spawn_reader(child.stdout.take().expect("piped stdout"));
-        let (_eh, err_rx) = spawn_reader(child.stderr.take().expect("piped stderr"));
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| StudioError::Render("missing piped stdout".into()))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| StudioError::Render("missing piped stderr".into()))?;
+        let (_oh, out_rx) = spawn_reader(stdout);
+        let (_eh, err_rx) = spawn_reader(stderr);
         Ok(Self {
             child,
             job_path,

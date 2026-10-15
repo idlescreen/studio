@@ -1,6 +1,6 @@
 {
  "repo": "studio",
- "rev": "ce26566",
+ "rev": "c571bae",
  "dirty": true,
  "pages": [
   {
@@ -403,5 +403,5 @@
    "reach": 0
   }
  ],
- "notes": "reach counts referencing files (shared file names qualified by ancestor dir);"
+ "notes": "reach counts referencing files (shared file names qualified by ancestor dir); bin_bytes from newest workspace dev rlib per crate via nm (inlining approx, bins re-link the same code; shims excluded, foreign paths never attributed);"
 }

@@ -29,9 +29,9 @@
 Offline saver → video rendering: the `render` engine (headless simulation →
 AV1/H.264/PNG/raw via ffmpeg) plus `idle-studio`, the Director TUI for
 queueing and tuning export jobs. Companion to the
-[IdleScreen](https://idlescreen.github.io) (`v4.2.1`) monorepo — high-performance
-Wayland screensaver and idle management suite for Linux (First-Class SuperFedora
-integration, 37 in-tree ASCII effects + 11 mathematical savers, `wp_viewporter`
+[IdleScreen](https://idlescreen.github.io) (`v4.3.0`) monorepo — high-performance
+unified single-binary Wayland screensaver and idle management suite for Linux (First-Class SuperFedora
+integration, 50 built-in 16-bit arcade & mathematical scenes, interactive `--tour` preview & TUI dashboard, `wp_viewporter`
 1x native grid GPU scaling, and multi-init support across `systemd`, `OpenRC`,
 `runit`, `s6`, `dinit`, and XDG autostart).
 

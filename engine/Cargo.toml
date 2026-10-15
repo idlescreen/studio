@@ -31,7 +31,6 @@ maintainer = "IdleScreen <jerydleuck@gmail.com>"
 copyright = "2026 IdleScreen"
 extended-description = "Offline IdleScreen effect renderer (saver math → AV1 via ffmpeg)."
 depends = "libc6, ffmpeg | ffmpeg-free | ffmpeg-full"
-recommends = "idlescreen-extras"
 section = "utils"
 priority = "optional"
 assets = [
@@ -56,6 +55,3 @@ assets = [
 # Requiring the binary avoids package-name conflicts (ffmpeg vs ffmpeg-free).
 [package.metadata.generate-rpm.requires]
 "/usr/bin/ffmpeg" = "*"
-
-[package.metadata.generate-rpm.recommends]
-idlescreen-extras = "*"

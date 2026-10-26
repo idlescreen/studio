@@ -94,9 +94,13 @@ impl PluginSession {
     }
 
     pub fn render(&mut self, _cols: usize, _rows: usize, width: u32, height: u32) -> Arc<[u8]> {
-        let total = (width as usize)
-            .saturating_mul(height as usize)
-            .saturating_mul(4);
+        // `RenderJob::validate` is the contract for the frame size. Clamp
+        // here as a last-resort guard so a caller that skipped validation
+        // cannot ask for an unbounded allocation.
+        let pixels = u64::from(width)
+            .saturating_mul(u64::from(height))
+            .min(crate::models::MAX_FRAME_PIXELS);
+        let total = (pixels as usize).saturating_mul(4);
         let mut buf = vec![0u8; total];
         let phase = self.tick_count.wrapping_mul(0x9E37_79B9) ^ self.effect_hash;
         for (i, chunk) in buf.chunks_exact_mut(4).enumerate() {

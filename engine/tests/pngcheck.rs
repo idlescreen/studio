@@ -1,9 +1,9 @@
-//! Verify the in-repo PNG decoder against committed baseline fixtures.
+//! Verify the in-repo PNG decoder against committed fixtures.
 //! (Kept as a permanent regression test for the hand-rolled inflate path.)
 
 #[test]
 fn committed_baselines_decode() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/snapshots/baselines");
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let mut n = 0;
     for e in std::fs::read_dir(&dir).unwrap() {
         let p = e.unwrap().path();
@@ -16,7 +16,7 @@ fn committed_baselines_decode() {
             n += 1;
         }
     }
-    assert_eq!(n, 5, "expected 5 committed png baselines");
+    assert_eq!(n, 5, "expected 5 committed PNG fixtures");
 }
 
 struct Rng(u64);

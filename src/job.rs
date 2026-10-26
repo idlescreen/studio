@@ -66,7 +66,14 @@ impl StudioJob {
         } else {
             safe_id
         };
-        let path = std::env::temp_dir().join(format!(
+        // Keep job files in the per-user runtime directory: /tmp is shared
+        // and world-writable, so a predictable name there can be pre-created
+        // (or symlinked) by another user.
+        let dir = std::env::var_os("XDG_RUNTIME_DIR")
+            .map(std::path::PathBuf::from)
+            .filter(|p| p.is_dir())
+            .unwrap_or_else(std::env::temp_dir);
+        let path = dir.join(format!(
             "idle-studio-{}-{safe_id}-{}.json",
             std::process::id(),
             SEQ.fetch_add(1, Ordering::Relaxed)
@@ -138,7 +145,14 @@ mod tests {
         ] {
             let j = StudioJob::new(id.into(), spec());
             let p = j.write_job_file().unwrap_or_else(|e| panic!("{id:?}: {e}"));
-            assert_eq!(p.parent().unwrap(), std::env::temp_dir(), "id {id:?}");
+            // The job file must stay inside the private directory the writer
+            // picked (per-user runtime dir when available, else the temp dir).
+            let parent = p.parent().unwrap();
+            let expected = std::env::var_os("XDG_RUNTIME_DIR")
+                .map(std::path::PathBuf::from)
+                .filter(|d| d.is_dir())
+                .unwrap_or_else(std::env::temp_dir);
+            assert_eq!(parent, expected, "id {id:?}");
             let name = p.file_name().unwrap().to_string_lossy();
             assert!(!name.contains(".."), "id {id:?} -> {name}");
             let _ = std::fs::remove_file(&p);

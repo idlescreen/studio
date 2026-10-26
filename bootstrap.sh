@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update && sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config libudev-dev
+    sudo apt-get update && sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config libudev-dev ffmpeg
 fi
 
 if ! command -v rustup >/dev/null 2>&1; then

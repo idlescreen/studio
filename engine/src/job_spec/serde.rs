@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use std::io::Write;
 
 impl JobSpec {
     pub fn to_value(&self) -> Value {
@@ -157,12 +158,28 @@ impl JobSpec {
         }
         let raw = self.to_json();
         // Atomic: tmp + rename so a crash can't leave a half-written job file
-        // for `render --job-file` to choke on.
+        // for `render --job-file` to choke on. `create_new` refuses to follow
+        // a pre-existing symlink at the temp path.
         let tmp = path.with_extension("job.tmp");
-        std::fs::write(&tmp, raw).map_err(|source| RenderError::Io {
-            path: tmp.clone(),
-            source,
-        })?;
+        {
+            let mut f = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&tmp)
+                .map_err(|source| RenderError::Io {
+                    path: tmp.clone(),
+                    source,
+                })?;
+            f.write_all(raw.as_bytes())
+                .map_err(|source| RenderError::Io {
+                    path: tmp.clone(),
+                    source,
+                })?;
+            f.sync_all().map_err(|source| RenderError::Io {
+                path: tmp.clone(),
+                source,
+            })?;
+        }
         std::fs::rename(&tmp, path).map_err(|source| RenderError::Io {
             path: path.to_path_buf(),
             source,

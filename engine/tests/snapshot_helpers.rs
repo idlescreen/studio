@@ -7,38 +7,6 @@ use idle_render::EncodeBackend;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-/// Path to a plugin .so file by name.
-pub fn plugin_path(name: &str) -> PathBuf {
-    // CI / dev box: plugins live at $REPO_ROOT/idle-saver-{name}/target/release/.
-    let repo_root = std::env::var("RENDER_REPO_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            // CARGO_MANIFEST_DIR = render/engine; repo = render/
-            let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            p.parent().unwrap().to_path_buf()
-        });
-    let candidate = repo_root
-        .join(format!("../idle-saver-{name}"))
-        .join("target")
-        .join("release")
-        .join(format!("libscreensaver_{name}.so"));
-    // Resolve the `..` so validate()'s parent-dir guard accepts it.
-    std::fs::canonicalize(&candidate).unwrap_or(candidate)
-}
-
-/// Return true if the plugin is missing (skip test).
-pub fn skip_if_missing(p: &Path) -> bool {
-    if !p.is_file() {
-        eprintln!(
-            "skipping snapshot test: plugin not built at {}",
-            p.display()
-        );
-        true
-    } else {
-        false
-    }
-}
-
 pub type Scenario = (
     /*name*/ &'static str,
     /*effect*/ &'static str,
@@ -140,10 +108,11 @@ pub fn make_job(
     baseline: &std::path::Path,
     out: &std::path::Path,
 ) -> (RenderJob, EncodeBackend) {
-    let plugin = plugin_path(effect);
+    // No external plugin: the engine ships its own deterministic session, so
+    // the render path is exercised without a plugin build.
     let job = RenderJob {
         effect: effect.into(),
-        plugin_path: Some(plugin),
+        plugin_path: None,
         seed,
         fps,
         duration: dur,

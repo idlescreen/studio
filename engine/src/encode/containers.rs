@@ -17,6 +17,21 @@ use crate::png_writer::encode_bgra_frame_to_png;
 
 use super::frame_bytes;
 
+/// Removes `frame*.png` files from `dir` so a sequence never mixes frames
+/// from two different renders.
+fn clear_png_sequence(dir: &Path) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        if name.starts_with("frame") && name.ends_with(".png") {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+}
+
 pub(super) fn write_png_sequence<I, B>(
     output_dir: &Path,
     width: u32,
@@ -32,6 +47,9 @@ where
         path: output_dir.to_path_buf(),
         source,
     })?;
+    // Remove frames left by a previous, longer render: a stale frame would
+    // otherwise be picked up as the last frame of this sequence.
+    clear_png_sequence(output_dir);
     let mut n = 0u64;
     for frame in frames {
         let buf = frame?;

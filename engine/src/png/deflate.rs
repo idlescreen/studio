@@ -99,7 +99,9 @@ pub(crate) fn dist_sym(dist: usize) -> (u16, u32, u32) {
             );
         }
     }
-    unreachable!()
+    // `dist` is 0 or out of range: emit distance 1 with no extra bits rather
+    // than panicking — a bad distance must not abort the encoder.
+    (0, 0, 0)
 }
 
 /// DEFLATE one block with greedy LZ77 + fixed Huffman codes.

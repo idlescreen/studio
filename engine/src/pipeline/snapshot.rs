@@ -54,8 +54,18 @@ fn scenario_name(job: &RenderJob) -> String {
     s
 }
 
-/// Pick the lexicographically largest `frame*.png` in `dir` (PngSequence
-/// uses zero-padded frame numbers, so lex order = chronological order).
+/// Extracts the frame number from a `frameNNNNNN.png` file name.
+fn frame_index(path: &std::path::Path) -> u64 {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return 0;
+    };
+    name.strip_prefix("frame")
+        .and_then(|rest| rest.strip_suffix(".png"))
+        .and_then(|digits| digits.parse::<u64>().ok())
+        .unwrap_or(0)
+}
+
+/// Picks the highest-numbered `frame*.png` in `dir`.
 fn last_png_in_dir(dir: &std::path::Path) -> Result<std::path::PathBuf, RenderError> {
     let mut best: Option<std::path::PathBuf> = None;
     for entry in std::fs::read_dir(dir).map_err(|source| RenderError::Io {
@@ -67,9 +77,11 @@ fn last_png_in_dir(dir: &std::path::Path) -> Result<std::path::PathBuf, RenderEr
             Err(_) => continue,
         };
         if p.extension().and_then(|s| s.to_str()) == Some("png") {
+            // Compare the frame number, not the file name: lexicographic
+            // order breaks once a sequence passes 999999 frames.
             let take = match &best {
                 None => true,
-                Some(cur) => p.file_name() > cur.file_name(),
+                Some(cur) => frame_index(&p) > frame_index(cur),
             };
             if take {
                 best = Some(p);

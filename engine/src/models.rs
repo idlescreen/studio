@@ -27,6 +27,13 @@ pub enum OutputFormat {
     Raw,
 }
 
+/// Largest accepted frame dimension (pixels) on either axis.
+pub const MAX_FRAME_DIMENSION: u32 = 16_384;
+
+/// Largest accepted frame size in pixels (8192 × 8192). The frame buffer is
+/// 4 bytes per pixel, so this caps a single frame at 256 MiB.
+pub const MAX_FRAME_PIXELS: u64 = 67_108_864;
+
 /// Container for video outputs (only meaningful when [`OutputFormat::Mp4`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Container {
@@ -114,6 +121,21 @@ impl RenderJob {
         if self.width == 0 || self.height == 0 {
             return Err(RenderError::Job("width and height must be > 0".into()));
         }
+        if self.width > MAX_FRAME_DIMENSION || self.height > MAX_FRAME_DIMENSION {
+            return Err(RenderError::Job(format!(
+                "width and height must be <= {MAX_FRAME_DIMENSION}"
+            )));
+        }
+        // The frame buffer is 4 bytes per pixel and is allocated once per
+        // rendered frame. Without a pixel budget, `--width 100000 --height
+        // 100000` asks for a 40 GB allocation before the first frame is
+        // written.
+        let pixels = u64::from(self.width) * u64::from(self.height);
+        if pixels > MAX_FRAME_PIXELS {
+            return Err(RenderError::Job(format!(
+                "frame size {pixels} pixels exceeds the {MAX_FRAME_PIXELS} pixel budget"
+            )));
+        }
         if self.duration.is_zero() {
             return Err(RenderError::Job("duration must be > 0".into()));
         }
@@ -200,6 +222,26 @@ mod tests {
         j.duration = Duration::from_secs(7200);
         j.segment = Some(Duration::from_secs(3600));
         assert_eq!(j.segment_count(), 2);
+    }
+
+    #[test]
+    fn rejects_oversized_frames() {
+        // A pathological --width/--height pair must be refused before the
+        // 4-bytes-per-pixel frame buffer is allocated.
+        let mut j = sample();
+        j.width = 100_000;
+        j.height = 100_000;
+        assert!(j.validate().is_err());
+
+        let mut j = sample();
+        j.width = MAX_FRAME_DIMENSION + 1;
+        j.height = 16;
+        assert!(j.validate().is_err());
+
+        let mut j = sample();
+        j.width = 8192;
+        j.height = 8192;
+        assert!(j.validate().is_ok(), "8K must still be accepted");
     }
 
     #[test]

@@ -13,21 +13,18 @@ use idle_render::EncodeBackend;
 use snapshot_helpers::tempdir;
 
 mod snapshot_helpers;
-use snapshot_helpers::{bin_cli_check, make_job, plugin_path, six_scenarios, skip_if_missing};
+use snapshot_helpers::{bin_cli_check, make_job, six_scenarios};
 
 #[test]
-fn all_six_snapshots_match_baseline() {
-    // Permit loading bare .so plugins without a manifest during test runs.
-    std::env::set_var("IDLE_ALLOW_UNSIGNED_PLUGINS", "1");
+fn all_six_snapshots_render_deterministically() {
+    // The engine renders through its own deterministic session, so this gate
+    // needs no plugin build and therefore actually runs in CI.
     let tmp = tempdir().expect("tmp");
     let baseline_dir = tmp.path().join("baselines");
     std::fs::create_dir_all(&baseline_dir).expect("baselines");
+    let mut rendered = 0usize;
 
     for (scenario, effect, seed, fps, dur, w, h, fmt, container) in six_scenarios() {
-        let so = plugin_path(effect);
-        if skip_if_missing(&so) {
-            continue;
-        }
         let work = tmp.path().join(format!("{scenario}.work"));
         std::fs::create_dir_all(&work).expect("work");
         let out = match fmt {
@@ -83,10 +80,18 @@ fn all_six_snapshots_match_baseline() {
                     "scenario {scenario}: baseline should exist at {}",
                     path.display()
                 );
+                let bytes = std::fs::metadata(path).expect("baseline metadata").len();
+                assert!(bytes > 0, "scenario {scenario}: baseline must not be empty");
             }
             other => panic!("scenario {scenario}: expected Matched, got {other:?}"),
         }
+        rendered += 1;
     }
+    assert_eq!(
+        rendered,
+        six_scenarios().len(),
+        "every scenario must render — a silent skip would turn this gate into a no-op"
+    );
 }
 
 #[test]
@@ -106,14 +111,7 @@ fn stdout_raw_header_format() {
     assert_eq!(&0x4952_4247u32.to_le_bytes(), b"GBRI");
     let tmp = tempdir().expect("tmp");
     let out = tmp.path().join("raw.bin");
-    let so = plugin_path("beams");
-    if !so.is_file() {
-        eprintln!("skipping stdout_raw_header_format: plugin not built");
-        return;
-    }
     let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_render"));
-    cmd.env("IDLE_ALLOW_UNSIGNED_PLUGINS", "1");
-    cmd.arg("--plugin-path").arg(&so);
     cmd.arg("-e").arg("beams");
     cmd.arg("--seed").arg("1");
     cmd.arg("--fps").arg("30");
@@ -179,13 +177,6 @@ fn args_translation_picks_correct_backend() {
 /// CI gating; this test pins each path.
 #[test]
 fn binary_exit_codes_match_documented_contract() {
-    let so = plugin_path("beams");
-    let plugin_available = so.is_file();
-    if !plugin_available {
-        eprintln!("skipping: beams plugin not built (run `cargo build -p beams` first)");
-        return;
-    }
-
     // exit 2: arg-parse error. The contract: `render --bogus-flag` returns 2.
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_render"))
         .arg("--this-flag-does-not-exist")
@@ -201,9 +192,6 @@ fn binary_exit_codes_match_documented_contract() {
 
     // exit 0: dry-run with valid args (no real encode work; just pipeline shape).
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_render"))
-        .env("IDLE_ALLOW_UNSIGNED_PLUGINS", "1")
-        .arg("--plugin-path")
-        .arg(&so)
         .arg("-e")
         .arg("beams")
         .arg("--duration")

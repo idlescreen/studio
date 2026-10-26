@@ -80,9 +80,17 @@ pub fn decode_rgba8(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
     if color == 3 && palette.is_empty() {
         return Err("png: palette image without PLTE".into());
     }
-    let stride = w as usize * bpp;
+    // Every dimension comes from the file: use checked arithmetic so a
+    // hostile header returns an error instead of overflowing (and aborting)
+    // or wrapping into an undersized buffer.
+    let stride = (w as usize)
+        .checked_mul(bpp)
+        .ok_or_else(|| "png: image dimensions overflow".to_string())?;
     let raw = zlib_decode(&idat)?;
-    let expected = (stride + 1) * h as usize;
+    let expected = stride
+        .checked_add(1)
+        .and_then(|s| s.checked_mul(h as usize))
+        .ok_or_else(|| "png: image dimensions overflow".to_string())?;
     if raw.len() < expected {
         return Err(format!(
             "png: image data too short ({} < {expected})",
@@ -90,7 +98,11 @@ pub fn decode_rgba8(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
         ));
     }
     // Unfilter into RGBA8.
-    let mut out = vec![0u8; w as usize * h as usize * 4];
+    let out_len = (w as usize)
+        .checked_mul(h as usize)
+        .and_then(|px| px.checked_mul(4))
+        .ok_or_else(|| "png: image dimensions overflow".to_string())?;
+    let mut out = vec![0u8; out_len];
     let mut prev = vec![0u8; stride];
     let mut cur = vec![0u8; stride];
     for y in 0..h as usize {

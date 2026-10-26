@@ -13,6 +13,9 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, PartialEq)]
 pub struct JobSpec {
     pub effect: String,
+    /// The words the scene animates.
+    pub text: String,
+    /// Legacy: there is no plugin ABI. A non-empty value is rejected.
     pub plugin_path: Option<PathBuf>,
     pub seed: u64,
     pub fps: u32,

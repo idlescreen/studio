@@ -6,15 +6,16 @@ use crate::models::{Container, OutputFormat, RenderJob};
 use std::path::PathBuf;
 
 const USAGE: &str = "\
-IdleScreen offline export capability (saver math → AV1)
+IdleScreen offline export capability (the daemon's own scenes → AV1)
 
 Usage: render [OPTIONS]
 
 Options:
       --job-file <PATH>       JSON job file (Studio / automation). When set,
                               flag fields below are ignored.
-  -e, --effect <NAME>         Effect name (allowlisted saver basename, e.g. ripple)
-      --plugin-path <PATH>    Explicit path to plugin .so (skips discovery)
+  -e, --effect <NAME>         Scene to render: one of the daemon's 53 scenes
+                              (aurora, beams, binarypath, blackhole, ...)
+      --text <TEXT>           The words the scene animates [default: IDLESCREEN]
       --seed <N>              RNG seed [default: 12648430]
       --fps <N>               Output timeline fps [default: 30]
       --duration <DUR>        Duration: 10s, 5m, 2h, 1d (or bare seconds) [default: 10s]
@@ -24,8 +25,8 @@ Options:
                               --dry-run/--stdout-raw.
       --width <N>             Pixel width [default: 1280]
       --height <N>            Pixel height [default: 720]
-      --cols <N>              Optional simulation grid columns
-      --rows <N>              Optional simulation grid rows
+      --cols <N>              Glyph grid columns [default: 120]
+      --rows <N>              Glyph grid rows [default: 36]
       --dry-run               Validate and print plan only
       --raw                   Write raw BGRA dump instead of AV1 (debug/tests).
                               Alias for --format raw.

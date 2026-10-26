@@ -7,6 +7,7 @@ use super::*;
 fn sample_spec() -> JobSpec {
     JobSpec {
         effect: "ripple".into(),
+        text: "IDLESCREEN".into(),
         plugin_path: None,
         seed: 1,
         fps: 30,

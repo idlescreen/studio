@@ -120,6 +120,7 @@ pub fn draw_new_job(area: Rect, f: &mut ratatui::Frame<'_>, form: &NewJobForm, s
         let edit = if focus && form.editing { " [edit]" } else { "" };
         let value = match field {
             FormField::Effect => format!("{}  (h/l cycle)", form.effect()),
+            FormField::Text => form.text.clone(),
             FormField::Duration => form.duration.clone(),
             FormField::Width => form.width.clone(),
             FormField::Height => form.height.clone(),
@@ -136,6 +137,7 @@ pub fn draw_new_job(area: Rect, f: &mut ratatui::Frame<'_>, form: &NewJobForm, s
         };
         let label = match field {
             FormField::Effect => "effect",
+            FormField::Text => "text",
             FormField::Duration => "duration",
             FormField::Width => "width",
             FormField::Height => "height",

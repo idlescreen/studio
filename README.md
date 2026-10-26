@@ -28,7 +28,9 @@
 
 Offline saver → video rendering: the `render` engine (headless simulation →
 AV1/H.264/PNG/raw via ffmpeg) plus `idle-studio`, the Director TUI for
-queueing and tuning export jobs. Companion to the
+queueing and tuning export jobs. The engine links the daemon's rendering core
+directly, so an export runs **the daemon's own 53 scenes** — the same scenes
+the screensaver draws on screen, not a re-implementation. Companion to the
 [IdleScreen](https://idlescreen.github.io) (`v4.7.1`) monorepo — high-performance
 unified single-binary Wayland screensaver and idle management suite for Linux (First-Class SuperFedora
 integration, 53 built-in 16-bit arcade & mathematical scenes, 10-bit HDR deep color, 4K 2x Hi-Res `wp_viewporter`
@@ -49,10 +51,14 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release --workspace
 
 ```sh
 idle-studio                                   # Director TUI: queue + tune export jobs
-render -e ascii --duration 30s -o out.mkv     # headless ASCII banner/effect → AV1/Matroska
-render -e beams --duration 30s -o out.mkv     # headless mathematical saver → AV1/Matroska
-render -e ripple --format png -o frames/      # one PNG per frame
+render -e beams --duration 30s -o out.mkv     # one of the daemon's 53 scenes → AV1/Matroska
+render -e ripple --text "HELLO" --duration 30s -o out.mkv
+render -e aurora --format png -o frames/      # one PNG per frame
 ```
+
+Every scene name the daemon ships is accepted by `-e`; an unknown name is
+refused with the full list. The same `--effect`, `--text`, `--seed`,
+`--cols`, and `--rows` always produce byte-identical output, on any host.
 
 ## License
 

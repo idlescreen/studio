@@ -34,9 +34,21 @@ impl RenderJob {
         if self.duration.is_zero() {
             return Err(RenderError::Job("duration must be > 0".into()));
         }
-        if self.effect.trim().is_empty() && self.plugin_path.is_none() {
+        if self.effect.trim().is_empty() {
             return Err(RenderError::Job(
-                "effect name or --plugin-path required".into(),
+                "effect name required: name one of the daemon's scenes".into(),
+            ));
+        }
+        if self.plugin_path.is_some() {
+            return Err(RenderError::Job(
+                "plugin loading is not supported: the scenes are built into the daemon. \
+                 Drop plugin_path and name a scene with effect."
+                    .into(),
+            ));
+        }
+        if self.text.trim().is_empty() {
+            return Err(RenderError::Job(
+                "text required: the scene has nothing to animate".into(),
             ));
         }
         if self.output.as_os_str().is_empty() {

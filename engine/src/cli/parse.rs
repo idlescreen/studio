@@ -19,7 +19,7 @@ impl Args {
         let mut a = Args {
             job_file: None,
             effect: None,
-            plugin_path: None,
+            text: None,
             seed: 0x00C0_FFEE,
             fps: 30,
             duration: "10s".into(),
@@ -81,7 +81,7 @@ impl Args {
                 }
                 "--job-file" => a.job_file = Some(PathBuf::from(val!("--job-file"))),
                 "-e" | "--effect" => a.effect = Some(val!("--effect")),
-                "--plugin-path" => a.plugin_path = Some(PathBuf::from(val!("--plugin-path"))),
+                "--text" => a.text = Some(val!("--text")),
                 "--seed" => a.seed = num("--seed", &val!("--seed")),
                 "--fps" => a.fps = num("--fps", &val!("--fps")),
                 "--duration" => a.duration = val!("--duration"),

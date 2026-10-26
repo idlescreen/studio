@@ -19,6 +19,7 @@ impl JobSpec {
         }
         Value::Object(vec![
             ("effect".into(), Value::Str(self.effect.clone())),
+            ("text".into(), Value::Str(self.text.clone())),
             ("plugin_path".into(), opt_path(&self.plugin_path)),
             ("seed".into(), Value::UInt(self.seed)),
             ("fps".into(), Value::UInt(self.fps as u64)),
@@ -119,6 +120,10 @@ impl JobSpec {
         }
         Ok(JobSpec {
             effect: req_str(obj, "effect")?,
+            text: opt_str(obj, "text")?
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| crate::scene::DEFAULT_TEXT.to_string()),
             plugin_path: opt_path(obj, "plugin_path")?,
             seed: num(obj, "seed", default_seed())?,
             fps: num(obj, "fps", default_fps())?,

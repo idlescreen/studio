@@ -17,6 +17,7 @@ pub mod models;
 pub mod paths;
 pub mod pipeline;
 pub mod png;
+pub mod scene;
 
 pub use encode::probe as encoder_probe;
 pub use encode::select as encode_select;
@@ -33,6 +34,9 @@ pub use job_spec::JobSpec;
 pub use models::RenderJob;
 pub use pipeline::{run_pipeline, PipelineResult};
 pub use png_writer::{encode_bgra_frame_to_png, encode_bgra_frame_to_png_result};
+pub use scene::effects::effect_names;
+pub use scene::geometry::{GridGeometry, NATIVE_COLS, NATIVE_ROWS};
+pub use scene::SceneSession;
 
 #[cfg(test)]
 mod proptests;

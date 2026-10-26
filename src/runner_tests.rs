@@ -13,6 +13,7 @@ fn job() -> StudioJob {
         "t".into(),
         JobSpec {
             effect: "beams".into(),
+            text: "IDLESCREEN".into(),
             plugin_path: None,
             seed: 1,
             fps: 30,

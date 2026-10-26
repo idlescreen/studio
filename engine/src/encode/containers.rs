@@ -15,7 +15,7 @@ use crate::encode_select::{
 use crate::error::RenderError;
 use crate::png_writer::encode_bgra_frame_to_png;
 
-use super::frame_bytes;
+use super::{FrameSource, FrameSpec};
 
 /// Removes `frame*.png` files from `dir` so a sequence never mixes frames
 /// from two different renders.
@@ -32,17 +32,12 @@ fn clear_png_sequence(dir: &Path) {
     }
 }
 
-pub(super) fn write_png_sequence<I, B>(
+pub(super) fn write_png_sequence(
     output_dir: &Path,
-    width: u32,
-    height: u32,
-    frames: I,
-) -> Result<u64, RenderError>
-where
-    I: Iterator<Item = Result<B, RenderError>>,
-    B: std::ops::Deref,
-    B::Target: AsRef<[u8]>,
-{
+    spec: FrameSpec,
+    frame_count: u64,
+    produce: &mut impl FrameSource,
+) -> Result<u64, RenderError> {
     std::fs::create_dir_all(output_dir).map_err(|source| RenderError::Io {
         path: output_dir.to_path_buf(),
         source,
@@ -50,10 +45,11 @@ where
     // Remove frames left by a previous, longer render: a stale frame would
     // otherwise be picked up as the last frame of this sequence.
     clear_png_sequence(output_dir);
+    let mut buf = vec![0u8; spec.frame_len()];
     let mut n = 0u64;
-    for frame in frames {
-        let buf = frame?;
-        let png_bytes = encode_bgra_frame_to_png(width, height, frame_bytes(&buf));
+    while n < frame_count {
+        FrameSource::produce(produce, n, &mut buf)?;
+        let png_bytes = encode_bgra_frame_to_png(spec.width, spec.height, &buf);
         let path = output_dir.join(format!("frame{:06}.png", n + 1));
         std::fs::write(&path, &png_bytes).map_err(|source| RenderError::Io {
             path: path.clone(),
@@ -67,22 +63,15 @@ where
     Ok(n)
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn write_ffmpeg_pipe<I, B>(
+pub(super) fn write_ffmpeg_pipe(
     settings: &EncodeSettings,
     encoder: &str,
-    width: u32,
-    height: u32,
-    fps: u32,
+    spec: FrameSpec,
     output: &Path,
-    frames: I,
+    frame_count: u64,
+    produce: &mut impl FrameSource,
     av1: bool,
-) -> Result<u64, RenderError>
-where
-    I: Iterator<Item = Result<B, RenderError>>,
-    B: std::ops::Deref,
-    B::Target: AsRef<[u8]>,
-{
+) -> Result<u64, RenderError> {
     crate::info!(
         "encode backend encoder={encoder} hw={} codec={}",
         is_hardware_encoder(encoder),
@@ -98,9 +87,9 @@ where
         "-pix_fmt",
         "bgra",
         "-s",
-        &format!("{width}x{height}"),
+        &format!("{}x{}", spec.width, spec.height),
         "-r",
-        &fps.to_string(),
+        &spec.fps.to_string(),
         "-i",
         "-",
         "-an",
@@ -150,9 +139,11 @@ where
         .stdin
         .take()
         .ok_or_else(|| RenderError::Ffmpeg("stdin missing".into()))?;
+    let mut buf = vec![0u8; spec.frame_len()];
     let mut n = 0u64;
-    for frame in frames {
-        if stdin.write_all(frame_bytes(&frame?)).is_err() {
+    while n < frame_count {
+        FrameSource::produce(produce, n, &mut buf)?;
+        if stdin.write_all(&buf).is_err() {
             break;
         }
         n += 1;

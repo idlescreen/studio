@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Pipeline setup helpers: export env, plugin resolution, encoder settings,
+//! Pipeline setup helpers: export env, scene resolution, encoder settings,
 //! frame counting, and resume fast-forward.
 
 #![allow(unsafe_code)]
 
-use super::session::{LaunchMode, PluginSession};
 use crate::encode::EncodeSettings;
 use crate::error::RenderError;
 use crate::models::RenderJob;
+use crate::scene::geometry::GridGeometry;
+use crate::scene::SceneSession;
 use std::time::Duration;
 
 pub fn export_seed_env(seed: u64) {
-    // SAFETY: single-threaded CLI before plugin load; values are numeric strings.
+    // SAFETY: single-threaded CLI before the scene is built; values are numeric strings.
     unsafe {
         std::env::set_var("RENDER_SEED", seed.to_string());
         std::env::set_var("IDLE_RENDER_SEED", seed.to_string());
@@ -26,15 +27,15 @@ pub fn export_seed_env(seed: u64) {
     }
 }
 
-pub(super) fn resolve_plugin(job: &RenderJob) -> Result<PluginSession, RenderError> {
-    // job.gpu_upscale is retained on JobSpec for file back-compat.
-    let scale = Some(1.0_f32);
-    if let Some(path) = &job.plugin_path {
-        return PluginSession::load_path_with_options(path, scale)
-            .map_err(|e| RenderError::Plugin(e.to_string()));
-    }
-    PluginSession::load_with_options(&job.effect, &LaunchMode::Preview, scale)
-        .map_err(|e| RenderError::Plugin(e.to_string()))
+/// Build the scene a job renders.
+///
+/// The scenes are the daemon's own: the plugin path is gone, and
+/// `RenderJob::validate` has already refused a job that still asks for one.
+pub(super) fn resolve_scene(
+    job: &RenderJob,
+    grid: GridGeometry,
+) -> Result<SceneSession, RenderError> {
+    SceneSession::new(&job.effect, &job.text, grid, job.seed, job.fps)
 }
 
 pub(super) fn encode_settings(job: &RenderJob) -> EncodeSettings {
@@ -52,10 +53,10 @@ pub(super) fn frames_for_duration(duration: Duration, fps: u32) -> u64 {
     n.max(1)
 }
 
-/// Advance simulation without raster/encode (used when --resume skips a part).
-pub(super) fn fast_forward(session: &mut PluginSession, frames: u64, fps: u32) {
-    let dt = Duration::from_secs_f64(1.0 / f64::from(fps));
+/// Advance the scene without rasterizing or encoding (used when --resume
+/// skips a part).
+pub(super) fn fast_forward(session: &mut SceneSession, frames: u64) {
     for _ in 0..frames {
-        session.tick(dt);
+        session.tick();
     }
 }

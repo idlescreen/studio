@@ -67,8 +67,8 @@ pub fn six_scenarios() -> Vec<Scenario> {
             Container::Mkv,
         ),
         (
-            "storm_burst",
-            "storm",
+            "thunderstorm_burst",
+            "thunderstorm",
             0x0BADF00D,
             60,
             Duration::from_secs(2),
@@ -112,6 +112,7 @@ pub fn make_job(
     // the render path is exercised without a plugin build.
     let job = RenderJob {
         effect: effect.into(),
+        text: "IDLESCREEN".into(),
         plugin_path: None,
         seed,
         fps,
@@ -181,8 +182,8 @@ pub fn bin_cli_check() -> String {
         "render",
         "-e",
         "beams",
-        "--plugin-path",
-        "/tmp/x.so",
+        "--text",
+        "IDLESCREEN",
         "--duration",
         "1s",
         "--seed",

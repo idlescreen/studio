@@ -29,7 +29,8 @@ Options:
   -h, --help          Print help
 
 enqueue options:
-  -e, --effect <NAME>      Effect name (required)
+  -e, --effect <NAME>      Scene name (one of the daemon's 53)
+      --text <TEXT>        Words the scene animates [default: IDLESCREEN]
   -o, --output <PATH>      Output path (required)
       --duration <DUR>     [default: 10s]
       --seed <N>           [default: 12648430]
@@ -81,27 +82,30 @@ fn main() -> ExitCode {
     };
     match cmd {
         Cmd::Tui => ExitCode::SUCCESS,
-        Cmd::Enqueue {
-            effect,
-            output,
-            duration,
-            seed,
-            fps,
-            width,
-            height,
-            dry_run,
-            id,
-            segment,
-            audio,
-            resume,
-            crf,
-            preset,
-            no_hw_encode,
-            no_gpu_upscale,
-        } => {
+        Cmd::Enqueue(args) => {
+            let EnqueueArgs {
+                effect,
+                text,
+                output,
+                duration,
+                seed,
+                fps,
+                width,
+                height,
+                dry_run,
+                id,
+                segment,
+                audio,
+                resume,
+                crf,
+                preset,
+                no_hw_encode,
+                no_gpu_upscale,
+            } = *args;
             let id = id.unwrap_or_else(|| queue.next_id());
             let spec = JobSpec {
                 effect,
+                text,
                 plugin_path: None,
                 seed,
                 fps,

@@ -153,6 +153,7 @@ mod tests {
     fn job(format: OutputFormat, container: Container, seed: u64) -> RenderJob {
         RenderJob {
             effect: "beams".into(),
+            text: "IDLESCREEN".into(),
             plugin_path: None,
             seed,
             fps: 30,

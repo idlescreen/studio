@@ -25,6 +25,7 @@ impl JobSpec {
         let stdout_raw = self.raw;
         let job = RenderJob {
             effect: self.effect,
+            text: self.text,
             plugin_path: self.plugin_path,
             seed: self.seed,
             fps: self.fps,

@@ -38,6 +38,7 @@ mod job_props {
                 id: "t".into(),
                 spec: JobSpec {
                     effect: effect.clone(),
+                    text: "IDLESCREEN".into(),
                     plugin_path: None,
                     seed,
                     fps,

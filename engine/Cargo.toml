@@ -24,6 +24,11 @@ name = "idle-render"
 path = "src/bin/idle-render.rs"
 
 [dependencies]
+# The scenes and the cell rasterizer live in the daemon crate. Only the
+# rendering core is linked: `default-features = false` turns off the
+# `product` feature, so no D-Bus client and no Wayland protocol bindings
+# come with it. The pin is a commit SHA, so a build is reproducible.
+idlescreen = { git = "https://github.com/idlescreen/idlescreen", rev = "4f058065ca171eac5731ff6565721396dc7a3e4f", default-features = false }
 
 [package.metadata.deb]
 name = "render"

@@ -137,6 +137,7 @@ mod tests {
     fn job(dur: u64, seg: Option<u64>) -> RenderJob {
         RenderJob {
             effect: "beams".into(),
+            text: "IDLESCREEN".into(),
             plugin_path: None,
             seed: 1,
             fps: 30,

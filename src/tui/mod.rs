@@ -25,7 +25,7 @@ use self::draw::{draw_new_job, draw_queue};
 use self::form::{NewJobForm, Screen};
 use self::keys::{form_key, queue_key, KeyOutcome};
 
-pub use self::form::EFFECTS;
+pub use self::form::effects;
 
 /// Restores the terminal (raw mode + alternate screen) on every exit path —
 /// including `?` early returns and panics. Without this, a corrupt queue or

@@ -2,10 +2,14 @@ use idle_render::JobSpec;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const EFFECTS: &[&str] = &[
-    "ascii", "aurora", "beams", "bursts", "chaos", "cosmos", "glyphs", "gnats", "hearth", "radar",
-    "ripple", "storm",
-];
+/// The scene names the daemon ships.
+///
+/// The list is read from the daemon rather than kept here: a name the
+/// Director offers that the daemon cannot render is worse than a missing
+/// entry. It is fetched once per form, not once per frame.
+pub fn effects() -> Vec<&'static str> {
+    idle_render::effect_names()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
@@ -16,6 +20,7 @@ pub enum Screen {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FormField {
     Effect,
+    Text,
     Duration,
     Width,
     Height,
@@ -27,6 +32,7 @@ pub enum FormField {
 
 pub const FORM_FIELDS: &[FormField] = &[
     FormField::Effect,
+    FormField::Text,
     FormField::Duration,
     FormField::Width,
     FormField::Height,
@@ -39,6 +45,9 @@ pub const FORM_FIELDS: &[FormField] = &[
 pub struct NewJobForm {
     pub field_i: usize,
     pub effect_i: usize,
+    /// The daemon's scene names, read once when the form is built.
+    pub effects: Vec<&'static str>,
+    pub text: String,
     pub duration: String,
     pub width: String,
     pub height: String,
@@ -52,10 +61,13 @@ pub struct NewJobForm {
 
 impl Default for NewJobForm {
     fn default() -> Self {
-        let effect = EFFECTS[0];
+        let effects = effects();
+        let effect = effects.first().copied().unwrap_or("beams");
         Self {
             field_i: 0,
             effect_i: 0,
+            effects,
+            text: idle_render::scene::DEFAULT_TEXT.to_string(),
             duration: "10s".into(),
             width: "1280".into(),
             height: "720".into(),
@@ -74,13 +86,19 @@ impl NewJobForm {
     }
 
     pub fn effect(&self) -> &'static str {
-        EFFECTS[self.effect_i % EFFECTS.len()]
+        self.effects
+            .get(self.effect_i % self.effects.len().max(1))
+            .copied()
+            .unwrap_or("beams")
     }
 
     pub fn cycle_effect(&mut self, dir: i32) {
-        let n = EFFECTS.len() as i32;
+        let n = self.effects.len() as i32;
+        if n == 0 {
+            return;
+        }
         let i = self.effect_i as i32 + dir;
-        self.effect_i = ((i % n) + n) as usize % EFFECTS.len();
+        self.effect_i = ((i % n) + n) as usize % self.effects.len();
         // Refresh default output stem when effect changes (if still on pattern).
         self.output = default_output_path(self.effect());
     }
@@ -94,6 +112,7 @@ impl NewJobForm {
 
     pub fn text_mut(&mut self) -> Option<&mut String> {
         match self.field() {
+            FormField::Text => Some(&mut self.text),
             FormField::Duration => Some(&mut self.duration),
             FormField::Width => Some(&mut self.width),
             FormField::Height => Some(&mut self.height),
@@ -132,8 +151,15 @@ impl NewJobForm {
         if output.as_os_str().is_empty() {
             return Err("output path required".into());
         }
+        let text = self.text.trim();
+        let text = if text.is_empty() {
+            idle_render::scene::DEFAULT_TEXT.to_string()
+        } else {
+            text.to_string()
+        };
         Ok(JobSpec {
             effect: self.effect().to_string(),
+            text,
             plugin_path: None,
             seed: 0x00C0_FFEE,
             fps,
@@ -181,26 +207,48 @@ mod tests {
     #[test]
     fn default_form_has_official_effect() {
         let f = NewJobForm::default();
-        assert!(EFFECTS.contains(&f.effect()));
+        assert!(f.effects.contains(&f.effect()));
         assert!(f.output.contains("idlescreen-"));
         assert!(f.output.ends_with(".mkv"));
     }
 
     #[test]
+    fn the_effect_list_is_the_daemons_own() {
+        let f = NewJobForm::default();
+        assert_eq!(f.effects.len(), 53);
+        assert!(f.effects.contains(&"beams"));
+        assert!(f.effects.contains(&"thunderstorm"));
+        // Names the daemon does not ship must not be offered.
+        assert!(!f.effects.contains(&"storm"));
+        assert!(!f.effects.contains(&"ascii"));
+    }
+
+    #[test]
     fn cycle_effect_wraps() {
         let mut f = NewJobForm::default();
-        for _ in 0..EFFECTS.len() + 2 {
+        for _ in 0..f.effects.len() + 2 {
             f.cycle_effect(1);
         }
-        assert!(EFFECTS.contains(&f.effect()));
+        assert!(f.effects.contains(&f.effect()));
     }
 
     #[test]
     fn to_job_spec_parses() {
         let f = NewJobForm::default();
         let s = f.to_job_spec().expect("spec");
-        assert_eq!(s.effect, "ascii");
+        assert_eq!(s.effect, "aurora");
         assert_eq!(s.width, 1280);
         assert_eq!(s.fps, 30);
+        assert_eq!(s.text, "IDLESCREEN");
+    }
+
+    #[test]
+    fn an_empty_text_falls_back_to_the_daemon_default() {
+        let f = NewJobForm {
+            text: "   ".into(),
+            ..NewJobForm::default()
+        };
+        let s = f.to_job_spec().expect("spec");
+        assert_eq!(s.text, "IDLESCREEN");
     }
 }

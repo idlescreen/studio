@@ -73,6 +73,7 @@ mod segment_props {
     fn job(total: u64, seg: u64) -> RenderJob {
         RenderJob {
             effect: "beams".into(),
+            text: "IDLESCREEN".into(),
             plugin_path: None,
             seed: 1,
             fps: 30,

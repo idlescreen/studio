@@ -40,7 +40,14 @@ impl Args {
         let stdout_raw = self.stdout_raw;
         let job = RenderJob {
             effect,
-            plugin_path: self.plugin_path,
+            text: self
+                .text
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or(crate::scene::DEFAULT_TEXT)
+                .to_string(),
+            plugin_path: None,
             seed: self.seed,
             fps: self.fps,
             duration,

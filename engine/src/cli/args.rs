@@ -6,11 +6,11 @@ pub struct Args {
     /// JSON job file (Studio / automation). When set, flag fields below are ignored.
     pub job_file: Option<PathBuf>,
 
-    /// Effect name (allowlisted saver basename, e.g. ripple)
+    /// Effect name (one of the daemon's 53 scenes, e.g. ripple)
     pub effect: Option<String>,
 
-    /// Explicit path to plugin .so (skips discovery)
-    pub plugin_path: Option<PathBuf>,
+    /// The words the scene animates
+    pub text: Option<String>,
 
     /// RNG seed
     pub seed: u64,

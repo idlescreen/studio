@@ -182,7 +182,8 @@ pub fn form_key(code: KeyCode, modifiers: KeyModifiers, form: &mut NewJobForm, u
         KeyCode::Enter => match form.field() {
             FormField::Effect => form.cycle_effect(1),
             FormField::DryRun => form.dry_run = !form.dry_run,
-            FormField::Duration
+            FormField::Text
+            | FormField::Duration
             | FormField::Width
             | FormField::Height
             | FormField::Fps

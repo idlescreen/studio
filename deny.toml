@@ -69,4 +69,10 @@ skip-tree = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# The render engine links the daemon's rendering core directly, so the export
+# runs the same scenes the screensaver does. Both sources are org-owned or
+# org-reviewed and pinned by revision.
+allow-git = [
+    "https://github.com/idlescreen/idlescreen",
+    "https://github.com/omacom-io/ttfx",
+]

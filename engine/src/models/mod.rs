@@ -51,6 +51,11 @@ pub enum Container {
 #[derive(Debug, Clone)]
 pub struct RenderJob {
     pub effect: String,
+    /// The words the scene animates (the daemon's banner text).
+    pub text: String,
+    /// Legacy field. There is no plugin ABI: the scenes are built into the
+    /// daemon. Kept so old job files still parse; a non-empty value is
+    /// rejected by [`RenderJob::validate`].
     pub plugin_path: Option<PathBuf>,
     pub seed: u64,
     pub fps: u32,

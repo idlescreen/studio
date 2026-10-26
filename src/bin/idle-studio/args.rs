@@ -10,29 +10,38 @@ pub(crate) struct Args {
     pub cmd: Option<Cmd>,
 }
 
+/// The options an `enqueue` invocation carries.
+///
+/// A named struct rather than inline enum fields: the variant carries more
+/// than two hundred bytes, which the enum lint rightly refuses to inline
+/// next to the one-byte variants.
+#[derive(Debug)]
+pub(crate) struct EnqueueArgs {
+    pub effect: String,
+    pub text: String,
+    pub output: PathBuf,
+    pub duration: String,
+    pub seed: u64,
+    pub fps: u32,
+    pub width: u32,
+    pub height: u32,
+    pub dry_run: bool,
+    pub id: Option<String>,
+    pub segment: Option<String>,
+    pub audio: Option<PathBuf>,
+    pub resume: bool,
+    pub crf: u8,
+    pub preset: Option<String>,
+    pub no_hw_encode: bool,
+    pub no_gpu_upscale: bool,
+}
+
 #[derive(Debug)]
 pub(crate) enum Cmd {
     /// Interactive Director TUI (same as default with no subcommand)
     Tui,
     /// Add a job to the queue (scripting; prefer TUI `n` for interactive use)
-    Enqueue {
-        effect: String,
-        output: PathBuf,
-        duration: String,
-        seed: u64,
-        fps: u32,
-        width: u32,
-        height: u32,
-        dry_run: bool,
-        id: Option<String>,
-        segment: Option<String>,
-        audio: Option<PathBuf>,
-        resume: bool,
-        crf: u8,
-        preset: Option<String>,
-        no_hw_encode: bool,
-        no_gpu_upscale: bool,
-    },
+    Enqueue(Box<EnqueueArgs>),
     /// List queue entries (scripting)
     List,
     /// Run the next pending job (or all with --all)
@@ -103,6 +112,7 @@ fn parse_run(argv: &[String], i: &mut usize, queue: &mut Option<PathBuf>) -> Cmd
 
 fn parse_enqueue(argv: &[String], i: &mut usize, queue: &mut Option<PathBuf>) -> Cmd {
     let mut effect = None;
+    let mut text = None;
     let mut output = None;
     let mut duration = "10s".to_string();
     let mut seed = 0x00C0_FFEEu64;
@@ -122,6 +132,7 @@ fn parse_enqueue(argv: &[String], i: &mut usize, queue: &mut Option<PathBuf>) ->
         *i += 1;
         match arg.as_str() {
             "-e" | "--effect" => effect = Some(next_val(argv, i, "--effect").to_string()),
+            "--text" => text = Some(next_val(argv, i, "--text").to_string()),
             "-o" | "--output" => output = Some(PathBuf::from(next_val(argv, i, "--output"))),
             "--duration" => duration = next_val(argv, i, "--duration").to_string(),
             "--seed" => seed = num("--seed", next_val(argv, i, "--seed")),
@@ -141,8 +152,9 @@ fn parse_enqueue(argv: &[String], i: &mut usize, queue: &mut Option<PathBuf>) ->
             other => fail(format!("unexpected argument '{other}' for 'enqueue'")),
         }
     }
-    Cmd::Enqueue {
+    Cmd::Enqueue(Box::new(EnqueueArgs {
         effect: effect.unwrap_or_else(|| fail("required: --effect <NAME>")),
+        text: text.unwrap_or_else(|| idle_render::scene::DEFAULT_TEXT.to_string()),
         output: output.unwrap_or_else(|| fail("required: --output <PATH>")),
         duration,
         seed,
@@ -158,5 +170,5 @@ fn parse_enqueue(argv: &[String], i: &mut usize, queue: &mut Option<PathBuf>) ->
         preset,
         no_hw_encode,
         no_gpu_upscale,
-    }
+    }))
 }

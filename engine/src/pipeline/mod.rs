@@ -1,22 +1,22 @@
 pub mod compare;
 pub mod segment;
-pub mod session;
 mod setup;
 pub mod snapshot;
 
 pub use setup::export_seed_env;
-use setup::{encode_settings, fast_forward, frames_for_duration, resolve_plugin};
+use setup::{encode_settings, fast_forward, frames_for_duration, resolve_scene};
 
 use crate::audio::mux_audio_bed;
-use crate::encode::{encode_raw_bgra_to_file, EncodeBackend, EncodeSettings};
+use crate::encode::{encode_raw_bgra_to_file, EncodeBackend, EncodeSettings, FrameSpec};
 use crate::error::RenderError;
 use crate::models::RenderJob;
 use crate::paths::ensure_parent_dir;
+use crate::scene::geometry::resolve as resolve_grid;
+use crate::scene::SceneSession;
 use segment::{concat_segments, plan_segments, segment_file_ready};
-use session::PluginSession;
 use snapshot::SnapshotOutcome;
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// Outcome of a finished (or dry-run) pipeline.
 #[derive(Debug, Clone)]
@@ -31,12 +31,14 @@ pub struct PipelineResult {
     pub snapshot: SnapshotOutcome,
 }
 
-/// Export seed env vars so plugins using `idle_api::LcgRng::from_env_or_random` match.
+/// Render one segment: step the scene, rasterize it, and hand the frames to
+/// the encoder.
+///
+/// The encoder owns the frame buffer and the producer fills it, so the
+/// render allocates nothing per frame.
 #[allow(clippy::too_many_arguments)]
 fn encode_one(
-    session: &mut PluginSession,
-    cols: usize,
-    rows: usize,
+    session: &mut SceneSession,
     width: u32,
     height: u32,
     fps: u32,
@@ -47,16 +49,11 @@ fn encode_one(
     settings: &EncodeSettings,
 ) -> Result<u64, RenderError> {
     ensure_parent_dir(output)?;
-    let dt = Duration::from_secs_f64(1.0 / f64::from(fps));
     let started = Instant::now();
     let mut index = 0u64;
-    let iter = std::iter::from_fn(|| {
-        if index >= frames_total {
-            return None;
-        }
-        session.tick(dt);
-        // Arc drops after write; session may mutate pixel_buf on next frame.
-        let pixels = session.render(cols, rows, width, height);
+    let mut produce = |_: u64, buf: &mut Vec<u8>| {
+        session.tick();
+        session.render_into(width, height, buf);
         index += 1;
         let global = frame_offset + index;
         if global.is_multiple_of(30) || index == frames_total {
@@ -66,9 +63,16 @@ fn encode_one(
             let eta = remain as f64 / fps_eff.max(1e-6);
             crate::info!("render progress frame={global} fps={fps_eff:.1} eta_s={eta:.0}");
         }
-        Some(Ok(pixels))
-    });
-    encode_raw_bgra_to_file(backend, settings, width, height, fps, output, iter)
+        Ok(())
+    };
+    encode_raw_bgra_to_file(
+        backend,
+        settings,
+        FrameSpec { width, height, fps },
+        output,
+        frames_total,
+        &mut produce,
+    )
 }
 
 /// Run the offline simulation and encode loop (optional segments + audio).
@@ -94,16 +98,8 @@ pub fn run_pipeline(
 
     ensure_parent_dir(&job.output)?;
     let settings = encode_settings(job);
-    let mut session = resolve_plugin(job)?;
-    let (cols, rows) = match (job.cols, job.rows) {
-        (Some(c), Some(r)) => (c, r),
-        _ => session.grid_for_pixels(job.width, job.height),
-    };
-    if cols == 0 || rows == 0 {
-        return Err(RenderError::Job("grid cols/rows resolved to zero".into()));
-    }
-    session.init(cols, rows);
-    session.set_simulation_rate(job.fps as f32);
+    let grid = resolve_grid(job.cols, job.rows)?;
+    let mut session = resolve_scene(job, grid)?;
 
     let mut written = 0u64;
     let mut frame_offset = 0u64;
@@ -117,7 +113,7 @@ pub fn run_pipeline(
                 plan.index,
                 plan.path.display()
             );
-            fast_forward(&mut session, part_frames, job.fps);
+            fast_forward(&mut session, part_frames);
             written += part_frames;
             frame_offset += part_frames;
             part_paths.push(plan.path.clone());
@@ -126,8 +122,6 @@ pub fn run_pipeline(
         }
         let n = encode_one(
             &mut session,
-            cols,
-            rows,
             job.width,
             job.height,
             job.fps,
@@ -174,6 +168,7 @@ mod tests {
     fn sample_job(dur_secs: u64, seg: Option<u64>) -> RenderJob {
         RenderJob {
             effect: "beams".into(),
+            text: "IDLESCREEN".into(),
             plugin_path: None,
             seed: 42,
             fps: 30,

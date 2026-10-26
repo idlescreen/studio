@@ -1,12 +1,12 @@
 {
  "repo": "studio",
- "rev": "3dac5e7",
+ "rev": "11382af",
  "dirty": false,
  "pages": [
   {
    "path": "./engine/src/audio.rs",
    "lines": 76,
-   "bin_bytes": 2961,
+   "bin_bytes": 2937,
    "heat_pct": null,
    "reach": 1
   },
@@ -27,20 +27,20 @@
   {
    "path": "./engine/src/cli/args.rs",
    "lines": 151,
-   "bin_bytes": 1161,
+   "bin_bytes": 1095,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/cli/job.rs",
-   "lines": 81,
-   "bin_bytes": 5767,
+   "lines": 88,
+   "bin_bytes": 6035,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/cli/mod.rs",
-   "lines": 58,
+   "lines": 59,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -48,42 +48,42 @@
   {
    "path": "./engine/src/cli/parse.rs",
    "lines": 130,
-   "bin_bytes": 14192,
+   "bin_bytes": 13851,
    "heat_pct": null,
-   "reach": 5
+   "reach": 4
   },
   {
    "path": "./engine/src/duration.rs",
    "lines": 75,
-   "bin_bytes": 2500,
+   "bin_bytes": 2473,
    "heat_pct": null,
    "reach": 4
   },
   {
    "path": "./engine/src/encode/containers.rs",
-   "lines": 178,
-   "bin_bytes": 10150,
+   "lines": 169,
+   "bin_bytes": 9572,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/encode/mod.rs",
-   "lines": 161,
-   "bin_bytes": 6051,
+   "lines": 211,
+   "bin_bytes": 5399,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/encode/probe.rs",
    "lines": 220,
-   "bin_bytes": 9183,
+   "bin_bytes": 9018,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/encode/select.rs",
    "lines": 77,
-   "bin_bytes": 224,
+   "bin_bytes": 212,
    "heat_pct": null,
    "reach": 2
   },
@@ -92,32 +92,32 @@
    "lines": 41,
    "bin_bytes": 1132,
    "heat_pct": null,
-   "reach": 17
+   "reach": 20
   },
   {
    "path": "./engine/src/job_spec/job.rs",
-   "lines": 66,
-   "bin_bytes": 4669,
+   "lines": 67,
+   "bin_bytes": 4803,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/mod.rs",
-   "lines": 113,
-   "bin_bytes": 5055,
+   "lines": 116,
+   "bin_bytes": 5163,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/serde.rs",
-   "lines": 188,
-   "bin_bytes": 29315,
+   "lines": 193,
+   "bin_bytes": 31329,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/tests.rs",
-   "lines": 70,
+   "lines": 71,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -132,14 +132,14 @@
   {
    "path": "./engine/src/json/parser.rs",
    "lines": 138,
-   "bin_bytes": 6698,
+   "bin_bytes": 6578,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/json/parser_str.rs",
    "lines": 141,
-   "bin_bytes": 6533,
+   "bin_bytes": 6446,
    "heat_pct": null,
    "reach": 0
   },
@@ -153,13 +153,13 @@
   {
    "path": "./engine/src/json/value.rs",
    "lines": 183,
-   "bin_bytes": 4428,
+   "bin_bytes": 4425,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/lib.rs",
-   "lines": 38,
+   "lines": 42,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -173,78 +173,71 @@
   },
   {
    "path": "./engine/src/models/mod.rs",
-   "lines": 124,
-   "bin_bytes": 537,
+   "lines": 129,
+   "bin_bytes": 534,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/models/tests.rs",
-   "lines": 120,
+   "lines": 121,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/models/validate.rs",
-   "lines": 73,
-   "bin_bytes": 3792,
+   "lines": 85,
+   "bin_bytes": 4093,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/paths.rs",
    "lines": 52,
-   "bin_bytes": 940,
+   "bin_bytes": 922,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/pipeline/compare.rs",
    "lines": 221,
-   "bin_bytes": 6799,
+   "bin_bytes": 6745,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/pipeline/mod.rs",
-   "lines": 213,
-   "bin_bytes": 7607,
+   "lines": 208,
+   "bin_bytes": 6728,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/pipeline/segment.rs",
-   "lines": 188,
-   "bin_bytes": 7062,
+   "lines": 189,
+   "bin_bytes": 6988,
    "heat_pct": null,
    "reach": 3
   },
   {
-   "path": "./engine/src/pipeline/session.rs",
-   "lines": 115,
-   "bin_bytes": 3008,
-   "heat_pct": null,
-   "reach": 2
-  },
-  {
    "path": "./engine/src/pipeline/setup.rs",
-   "lines": 61,
-   "bin_bytes": 1349,
+   "lines": 62,
+   "bin_bytes": 912,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/pipeline/snapshot.rs",
-   "lines": 214,
-   "bin_bytes": 7209,
+   "lines": 215,
+   "bin_bytes": 7140,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/png/decode.rs",
    "lines": 181,
-   "bin_bytes": 16733,
+   "bin_bytes": 16650,
    "heat_pct": null,
    "reach": 1
   },
@@ -258,7 +251,7 @@
   {
    "path": "./engine/src/png/inflate.rs",
    "lines": 248,
-   "bin_bytes": 16167,
+   "bin_bytes": 15854,
    "heat_pct": null,
    "reach": 1
   },
@@ -279,13 +272,62 @@
   {
    "path": "./engine/src/png/writer.rs",
    "lines": 76,
-   "bin_bytes": 1895,
+   "bin_bytes": 1889,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/proptests.rs",
-   "lines": 117,
+   "lines": 118,
+   "bin_bytes": null,
+   "heat_pct": null,
+   "reach": 0
+  },
+  {
+   "path": "./engine/src/scene/effects.rs",
+   "lines": 83,
+   "bin_bytes": 964,
+   "heat_pct": null,
+   "reach": 5
+  },
+  {
+   "path": "./engine/src/scene/frame_buffer.rs",
+   "lines": 82,
+   "bin_bytes": 549,
+   "heat_pct": null,
+   "reach": 1
+  },
+  {
+   "path": "./engine/src/scene/geometry.rs",
+   "lines": 80,
+   "bin_bytes": 503,
+   "heat_pct": null,
+   "reach": 7
+  },
+  {
+   "path": "./engine/src/scene/mod.rs",
+   "lines": 17,
+   "bin_bytes": null,
+   "heat_pct": null,
+   "reach": 0
+  },
+  {
+   "path": "./engine/src/scene/session/art.rs",
+   "lines": 55,
+   "bin_bytes": 742,
+   "heat_pct": null,
+   "reach": 1
+  },
+  {
+   "path": "./engine/src/scene/session/mod.rs",
+   "lines": 167,
+   "bin_bytes": 3790,
+   "heat_pct": null,
+   "reach": 0
+  },
+  {
+   "path": "./engine/src/scene/session/tests.rs",
+   "lines": 97,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -299,7 +341,7 @@
   },
   {
    "path": "./engine/tests/snapshot_helpers.rs",
-   "lines": 202,
+   "lines": 203,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 1
@@ -313,14 +355,14 @@
   },
   {
    "path": "./src/bin/idle-studio/args.rs",
-   "lines": 162,
+   "lines": 174,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./src/bin/idle-studio/main.rs",
-   "lines": 188,
+   "lines": 192,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -334,8 +376,8 @@
   },
   {
    "path": "./src/job.rs",
-   "lines": 171,
-   "bin_bytes": 3933,
+   "lines": 172,
+   "bin_bytes": 3919,
    "heat_pct": null,
    "reach": 8
   },
@@ -348,7 +390,7 @@
   },
   {
    "path": "./src/proptests.rs",
-   "lines": 75,
+   "lines": 76,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -356,13 +398,13 @@
   {
    "path": "./src/queue.rs",
    "lines": 235,
-   "bin_bytes": 12813,
+   "bin_bytes": 12683,
    "heat_pct": null,
    "reach": 6
   },
   {
    "path": "./src/queue_tests.rs",
-   "lines": 106,
+   "lines": 107,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -370,13 +412,13 @@
   {
    "path": "./src/runner.rs",
    "lines": 182,
-   "bin_bytes": 11339,
+   "bin_bytes": 11228,
    "heat_pct": null,
    "reach": 3
   },
   {
    "path": "./src/runner_tests.rs",
-   "lines": 111,
+   "lines": 112,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -384,35 +426,35 @@
   {
    "path": "./src/tui/actions.rs",
    "lines": 102,
-   "bin_bytes": 5296,
+   "bin_bytes": 5281,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./src/tui/draw.rs",
-   "lines": 176,
-   "bin_bytes": 10928,
+   "lines": 178,
+   "bin_bytes": 10974,
    "heat_pct": null,
-   "reach": 1
+   "reach": 2
   },
   {
    "path": "./src/tui/form.rs",
-   "lines": 206,
-   "bin_bytes": 5483,
+   "lines": 254,
+   "bin_bytes": 6673,
    "heat_pct": null,
    "reach": 3
   },
   {
    "path": "./src/tui/keys.rs",
-   "lines": 216,
-   "bin_bytes": 9727,
+   "lines": 217,
+   "bin_bytes": 9655,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./src/tui/mod.rs",
    "lines": 161,
-   "bin_bytes": 6570,
+   "bin_bytes": 6513,
    "heat_pct": null,
    "reach": 0
   }

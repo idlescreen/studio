@@ -1,12 +1,12 @@
 {
  "repo": "studio",
- "rev": "f6284b4",
+ "rev": "67b566b",
  "dirty": false,
  "pages": [
   {
    "path": "./engine/src/audio.rs",
    "lines": 76,
-   "bin_bytes": 3063,
+   "bin_bytes": 2961,
    "heat_pct": null,
    "reach": 1
   },
@@ -27,14 +27,14 @@
   {
    "path": "./engine/src/cli/args.rs",
    "lines": 151,
-   "bin_bytes": 1153,
+   "bin_bytes": 1161,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/cli/job.rs",
    "lines": 81,
-   "bin_bytes": 5858,
+   "bin_bytes": 5767,
    "heat_pct": null,
    "reach": 0
   },
@@ -48,35 +48,35 @@
   {
    "path": "./engine/src/cli/parse.rs",
    "lines": 130,
-   "bin_bytes": 14135,
+   "bin_bytes": 14192,
    "heat_pct": null,
-   "reach": 4
+   "reach": 5
   },
   {
    "path": "./engine/src/duration.rs",
    "lines": 75,
-   "bin_bytes": 2498,
+   "bin_bytes": 2500,
    "heat_pct": null,
    "reach": 4
   },
   {
    "path": "./engine/src/encode/containers.rs",
-   "lines": 160,
-   "bin_bytes": 9314,
+   "lines": 178,
+   "bin_bytes": 10150,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/encode/mod.rs",
    "lines": 161,
-   "bin_bytes": 6401,
+   "bin_bytes": 6051,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/encode/probe.rs",
    "lines": 220,
-   "bin_bytes": 9243,
+   "bin_bytes": 9183,
    "heat_pct": null,
    "reach": 2
   },
@@ -97,21 +97,21 @@
   {
    "path": "./engine/src/job_spec/job.rs",
    "lines": 66,
-   "bin_bytes": 4764,
+   "bin_bytes": 4669,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/mod.rs",
    "lines": 113,
-   "bin_bytes": 5062,
+   "bin_bytes": 5055,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/serde.rs",
-   "lines": 171,
-   "bin_bytes": 28595,
+   "lines": 188,
+   "bin_bytes": 29315,
    "heat_pct": null,
    "reach": 0
   },
@@ -132,14 +132,14 @@
   {
    "path": "./engine/src/json/parser.rs",
    "lines": 138,
-   "bin_bytes": 6906,
+   "bin_bytes": 6698,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/json/parser_str.rs",
    "lines": 141,
-   "bin_bytes": 6678,
+   "bin_bytes": 6533,
    "heat_pct": null,
    "reach": 0
   },
@@ -153,7 +153,7 @@
   {
    "path": "./engine/src/json/value.rs",
    "lines": 183,
-   "bin_bytes": 4420,
+   "bin_bytes": 4428,
    "heat_pct": null,
    "reach": 1
   },
@@ -172,11 +172,25 @@
    "reach": 2
   },
   {
-   "path": "./engine/src/models.rs",
-   "lines": 255,
-   "bin_bytes": 3566,
+   "path": "./engine/src/models/mod.rs",
+   "lines": 124,
+   "bin_bytes": 537,
    "heat_pct": null,
-   "reach": 12
+   "reach": 0
+  },
+  {
+   "path": "./engine/src/models/tests.rs",
+   "lines": 120,
+   "bin_bytes": null,
+   "heat_pct": null,
+   "reach": 0
+  },
+  {
+   "path": "./engine/src/models/validate.rs",
+   "lines": 73,
+   "bin_bytes": 3792,
+   "heat_pct": null,
+   "reach": 0
   },
   {
    "path": "./engine/src/paths.rs",
@@ -188,70 +202,70 @@
   {
    "path": "./engine/src/pipeline/compare.rs",
    "lines": 221,
-   "bin_bytes": 6881,
+   "bin_bytes": 6799,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/pipeline/mod.rs",
    "lines": 213,
-   "bin_bytes": 7799,
+   "bin_bytes": 7607,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/pipeline/segment.rs",
    "lines": 188,
-   "bin_bytes": 7051,
+   "bin_bytes": 7062,
    "heat_pct": null,
    "reach": 3
   },
   {
    "path": "./engine/src/pipeline/session.rs",
-   "lines": 111,
-   "bin_bytes": 2960,
+   "lines": 115,
+   "bin_bytes": 3008,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/pipeline/setup.rs",
    "lines": 61,
-   "bin_bytes": 1348,
+   "bin_bytes": 1349,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/pipeline/snapshot.rs",
-   "lines": 202,
-   "bin_bytes": 7047,
+   "lines": 214,
+   "bin_bytes": 7209,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/png/decode.rs",
-   "lines": 169,
-   "bin_bytes": 15972,
+   "lines": 181,
+   "bin_bytes": 16733,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/png/deflate.rs",
-   "lines": 203,
-   "bin_bytes": 6829,
+   "lines": 205,
+   "bin_bytes": 6824,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/png/inflate.rs",
    "lines": 248,
-   "bin_bytes": 16362,
+   "bin_bytes": 16167,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/png/mod.rs",
    "lines": 120,
-   "bin_bytes": 3529,
+   "bin_bytes": 3531,
    "heat_pct": null,
    "reach": 0
   },
@@ -285,14 +299,14 @@
   },
   {
    "path": "./engine/tests/snapshot_helpers.rs",
-   "lines": 233,
+   "lines": 202,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/tests/snapshots.rs",
-   "lines": 224,
+   "lines": 212,
    "bin_bytes": null,
    "heat_pct": null,
    "reach": 0
@@ -320,8 +334,8 @@
   },
   {
    "path": "./src/job.rs",
-   "lines": 157,
-   "bin_bytes": 3776,
+   "lines": 171,
+   "bin_bytes": 3933,
    "heat_pct": null,
    "reach": 8
   },
@@ -342,7 +356,7 @@
   {
    "path": "./src/queue.rs",
    "lines": 235,
-   "bin_bytes": 12933,
+   "bin_bytes": 12813,
    "heat_pct": null,
    "reach": 6
   },
@@ -356,7 +370,7 @@
   {
    "path": "./src/runner.rs",
    "lines": 182,
-   "bin_bytes": 11421,
+   "bin_bytes": 11339,
    "heat_pct": null,
    "reach": 3
   },
@@ -370,14 +384,14 @@
   {
    "path": "./src/tui/actions.rs",
    "lines": 102,
-   "bin_bytes": 5349,
+   "bin_bytes": 5296,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./src/tui/draw.rs",
    "lines": 176,
-   "bin_bytes": 10898,
+   "bin_bytes": 10928,
    "heat_pct": null,
    "reach": 1
   },
@@ -391,14 +405,14 @@
   {
    "path": "./src/tui/keys.rs",
    "lines": 216,
-   "bin_bytes": 9719,
+   "bin_bytes": 9727,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./src/tui/mod.rs",
    "lines": 161,
-   "bin_bytes": 6688,
+   "bin_bytes": 6570,
    "heat_pct": null,
    "reach": 0
   }

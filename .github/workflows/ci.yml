@@ -109,7 +109,10 @@ jobs:
   bootstrap:
     name: bootstrap on a clean checkout
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # This job is the only one that installs the real packages, and ffmpeg
+    # is a large one. On a slow mirror it has been seen to take over twenty
+    # minutes, so the ceiling is generous on purpose.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install Rust

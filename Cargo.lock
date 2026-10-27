@@ -580,7 +580,7 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idle-studio"
-version = "4.8.0"
+version = "4.8.1"
 dependencies = [
  "crossterm",
  "libc",
@@ -1213,7 +1213,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "render"
-version = "4.8.0"
+version = "4.8.1"
 dependencies = [
  "idlescreen",
 ]

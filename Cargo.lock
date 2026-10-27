@@ -591,7 +591,7 @@ dependencies = [
 [[package]]
 name = "idlescreen"
 version = "4.8.0"
-source = "git+https://github.com/idlescreen/idlescreen?rev=4f058065ca171eac5731ff6565721396dc7a3e4f#4f058065ca171eac5731ff6565721396dc7a3e4f"
+source = "git+https://github.com/idlescreen/idlescreen?rev=4d142a81dd91453628113292fbef66862d5f85ea#4d142a81dd91453628113292fbef66862d5f85ea"
 dependencies = [
  "libc",
  "ttfx",

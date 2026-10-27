@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use idlescreen::ascii::draw::paint_frame;
 use idlescreen::ascii::effects::EffectKind;
-use idlescreen::ascii::engine::EngineSession;
+use idlescreen::ascii::engine::{EngineSession, SceneStep};
 use idlescreen::ascii::sys_info::detect_system_theme;
 use idlescreen::cell::TerminalCell;
 use idlescreen::raster::blit::blit_cells_to_argb;
@@ -66,13 +66,21 @@ impl SceneSession {
                 "the scene has nothing to animate: pass --text with the words to render".into(),
             ));
         }
-        let engine = EngineSession::new(&art, kind, grid.cols, grid.rows, seed, fps.max(1))
-            .ok_or_else(|| {
-                RenderError::Job(format!(
-                    "the daemon could not start the '{effect}' scene on a {}x{} grid",
-                    grid.cols, grid.rows
-                ))
-            })?;
+        let engine = EngineSession::new_paced(
+            &art,
+            kind,
+            grid.cols,
+            grid.rows,
+            seed,
+            fps.max(1),
+            kind.slot_secs(),
+        )
+        .ok_or_else(|| {
+            RenderError::Job(format!(
+                "the daemon could not start the '{effect}' scene on a {}x{} grid",
+                grid.cols, grid.rows
+            ))
+        })?;
         let theme = detect_system_theme();
         Ok(Self {
             effect: kind,
@@ -105,20 +113,22 @@ impl SceneSession {
     /// is not, so the scene is rebuilt with the same seed when it finishes —
     /// the same animation, played again.
     pub fn tick(&mut self) {
-        let Some(frame) = self.engine.next_frame() else {
-            self.restart();
-            return;
-        };
-        self.frame.clear();
-        self.frame.push_str(&frame);
-        paint_frame(
-            &self.frame,
-            &mut self.cells,
-            self.grid.cols,
-            self.grid.rows,
-            self.fg,
-            self.bg,
-        );
+        let dt = self.frame_step();
+        let step = self.engine.next_frame_into(&mut self.frame, dt);
+        match step {
+            SceneStep::Advanced => {
+                paint_frame(
+                    &self.frame,
+                    &mut self.cells,
+                    self.grid.cols,
+                    self.grid.rows,
+                    self.fg,
+                    self.bg,
+                );
+            }
+            SceneStep::Held => {}
+            SceneStep::Finished => self.restart(),
+        }
     }
 
     /// Rasterize the current cell grid into `out` as BGRA bytes.
@@ -144,13 +154,14 @@ impl SceneSession {
 
     /// Rebuild the scene so the animation plays again.
     fn restart(&mut self) {
-        if let Some(engine) = EngineSession::new(
+        if let Some(engine) = EngineSession::new_paced(
             &self.text,
             self.effect,
             self.grid.cols,
             self.grid.rows,
             self.seed,
             self.fps,
+            self.effect.slot_secs(),
         ) {
             self.engine = engine;
         }

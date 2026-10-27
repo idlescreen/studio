@@ -6,8 +6,21 @@ on:
   pull_request:
     branches: [ "master" ]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
+# No job installs system packages. The studio links the daemon crate with
+# `default-features = false`, so it needs no D-Bus, no Wayland client and no
+# TLS headers, and ffmpeg is a runtime shell-out rather than a build
+# dependency — the dry-run smoke test returns before it ever spawns ffmpeg.
+# Installing ffmpeg here cost ~8 minutes of every job and left the clippy
+# job's 15-minute ceiling with almost no headroom, which is what made it
+# time out. The bootstrap job still installs the real packages: it exercises
+# the user-facing install path, which must genuinely work.
 
 jobs:
   fmt:
@@ -31,10 +44,6 @@ jobs:
     needs: fmt
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: System deps
-      run: |
-        sudo apt-get -o Acquire::Retries=3 update
-        sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config ffmpeg
     - name: rustup + clippy
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
@@ -49,10 +58,6 @@ jobs:
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: System deps
-      run: |
-        sudo apt-get -o Acquire::Retries=3 update
-        sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config ffmpeg
     - name: rustup + test
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
@@ -66,10 +71,6 @@ jobs:
     needs: test
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: System deps
-      run: |
-        sudo apt-get -o Acquire::Retries=3 update
-        sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config ffmpeg
     - name: rustup
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
@@ -83,10 +84,6 @@ jobs:
     needs: test
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: System deps
-      run: |
-        sudo apt-get -o Acquire::Retries=3 update
-        sudo apt-get install -y libdbus-1-dev libwayland-dev libxkbcommon-dev libssl-dev pkg-config
     - name: MSRV toolchain
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.96.0

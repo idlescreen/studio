@@ -1,6 +1,6 @@
 {
  "repo": "studio",
- "rev": "87065c4",
+ "rev": "dd0873f",
  "dirty": false,
  "pages": [
   {
@@ -49,7 +49,7 @@
    "path": "./engine/src/cli/parse.rs",
    "lines": 130,
    "bin_bytes": 14172,
-   "heat_pct": 7.59,
+   "heat_pct": 5.34,
    "reach": 4
   },
   {
@@ -112,7 +112,7 @@
    "path": "./engine/src/job_spec/serde.rs",
    "lines": 193,
    "bin_bytes": 31722,
-   "heat_pct": 3.38,
+   "heat_pct": 2.37,
    "reach": 0
   },
   {
@@ -378,7 +378,7 @@
    "path": "./src/job.rs",
    "lines": 172,
    "bin_bytes": 3928,
-   "heat_pct": 0.84,
+   "heat_pct": 0.59,
    "reach": 8
   },
   {
@@ -399,21 +399,21 @@
    "path": "./src/queue.rs",
    "lines": 235,
    "bin_bytes": 12813,
-   "heat_pct": 0.84,
+   "heat_pct": 1.19,
    "reach": 6
   },
   {
    "path": "./src/queue_tests.rs",
    "lines": 107,
    "bin_bytes": null,
-   "heat_pct": 1.69,
+   "heat_pct": 1.78,
    "reach": 0
   },
   {
    "path": "./src/runner.rs",
    "lines": 182,
    "bin_bytes": 11339,
-   "heat_pct": 0.84,
+   "heat_pct": 1.19,
    "reach": 3
   },
   {
@@ -459,5 +459,5 @@
    "reach": 0
   }
  ],
- "notes": "reach counts referencing files (shared file names qualified by ancestor dir); bin_bytes from newest workspace dev rlib per crate via nm (inlining approx, bins re-link the same code; shims excluded, foreign paths never attributed); heat from 237 attributed samples over 48/204 binaries at 10Hz incl. one child level; every repo-resolving frame counts;"
+ "notes": "reach counts referencing files (shared file names qualified by ancestor dir); bin_bytes from newest workspace dev rlib per crate via nm (inlining approx, bins re-link the same code; shims excluded, foreign paths never attributed); heat from 337 attributed samples over 68/274 binaries at 10Hz incl. one child level; every repo-resolving frame counts;"
 }

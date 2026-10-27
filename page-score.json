@@ -1,12 +1,12 @@
 {
  "repo": "studio",
- "rev": "11382af",
+ "rev": "87065c4",
  "dirty": false,
  "pages": [
   {
    "path": "./engine/src/audio.rs",
    "lines": 76,
-   "bin_bytes": 2937,
+   "bin_bytes": 2961,
    "heat_pct": null,
    "reach": 1
   },
@@ -27,14 +27,14 @@
   {
    "path": "./engine/src/cli/args.rs",
    "lines": 151,
-   "bin_bytes": 1095,
+   "bin_bytes": 1161,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/cli/job.rs",
    "lines": 88,
-   "bin_bytes": 6035,
+   "bin_bytes": 6158,
    "heat_pct": null,
    "reach": 0
   },
@@ -48,42 +48,42 @@
   {
    "path": "./engine/src/cli/parse.rs",
    "lines": 130,
-   "bin_bytes": 13851,
-   "heat_pct": null,
+   "bin_bytes": 14172,
+   "heat_pct": 7.59,
    "reach": 4
   },
   {
    "path": "./engine/src/duration.rs",
    "lines": 75,
-   "bin_bytes": 2473,
+   "bin_bytes": 2500,
    "heat_pct": null,
    "reach": 4
   },
   {
    "path": "./engine/src/encode/containers.rs",
    "lines": 169,
-   "bin_bytes": 9572,
+   "bin_bytes": 9638,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/encode/mod.rs",
    "lines": 211,
-   "bin_bytes": 5399,
+   "bin_bytes": 5501,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/encode/probe.rs",
    "lines": 220,
-   "bin_bytes": 9018,
+   "bin_bytes": 9183,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/encode/select.rs",
    "lines": 77,
-   "bin_bytes": 212,
+   "bin_bytes": 224,
    "heat_pct": null,
    "reach": 2
   },
@@ -97,22 +97,22 @@
   {
    "path": "./engine/src/job_spec/job.rs",
    "lines": 67,
-   "bin_bytes": 4803,
+   "bin_bytes": 4902,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/mod.rs",
    "lines": 116,
-   "bin_bytes": 5163,
+   "bin_bytes": 5184,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/job_spec/serde.rs",
    "lines": 193,
-   "bin_bytes": 31329,
-   "heat_pct": null,
+   "bin_bytes": 31722,
+   "heat_pct": 3.38,
    "reach": 0
   },
   {
@@ -132,14 +132,14 @@
   {
    "path": "./engine/src/json/parser.rs",
    "lines": 138,
-   "bin_bytes": 6578,
+   "bin_bytes": 6698,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./engine/src/json/parser_str.rs",
    "lines": 141,
-   "bin_bytes": 6446,
+   "bin_bytes": 6533,
    "heat_pct": null,
    "reach": 0
   },
@@ -153,7 +153,7 @@
   {
    "path": "./engine/src/json/value.rs",
    "lines": 183,
-   "bin_bytes": 4425,
+   "bin_bytes": 4428,
    "heat_pct": null,
    "reach": 1
   },
@@ -174,7 +174,7 @@
   {
    "path": "./engine/src/models/mod.rs",
    "lines": 129,
-   "bin_bytes": 534,
+   "bin_bytes": 537,
    "heat_pct": null,
    "reach": 0
   },
@@ -188,35 +188,35 @@
   {
    "path": "./engine/src/models/validate.rs",
    "lines": 85,
-   "bin_bytes": 4093,
+   "bin_bytes": 4165,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/paths.rs",
    "lines": 52,
-   "bin_bytes": 922,
+   "bin_bytes": 940,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/pipeline/compare.rs",
    "lines": 221,
-   "bin_bytes": 6745,
+   "bin_bytes": 6799,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/pipeline/mod.rs",
    "lines": 208,
-   "bin_bytes": 6728,
+   "bin_bytes": 6832,
    "heat_pct": null,
    "reach": 0
   },
   {
    "path": "./engine/src/pipeline/segment.rs",
    "lines": 189,
-   "bin_bytes": 6988,
+   "bin_bytes": 7062,
    "heat_pct": null,
    "reach": 3
   },
@@ -230,14 +230,14 @@
   {
    "path": "./engine/src/pipeline/snapshot.rs",
    "lines": 215,
-   "bin_bytes": 7140,
+   "bin_bytes": 7209,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./engine/src/png/decode.rs",
    "lines": 181,
-   "bin_bytes": 16650,
+   "bin_bytes": 16733,
    "heat_pct": null,
    "reach": 1
   },
@@ -251,7 +251,7 @@
   {
    "path": "./engine/src/png/inflate.rs",
    "lines": 248,
-   "bin_bytes": 15854,
+   "bin_bytes": 16167,
    "heat_pct": null,
    "reach": 1
   },
@@ -272,7 +272,7 @@
   {
    "path": "./engine/src/png/writer.rs",
    "lines": 76,
-   "bin_bytes": 1889,
+   "bin_bytes": 1895,
    "heat_pct": null,
    "reach": 2
   },
@@ -300,7 +300,7 @@
   {
    "path": "./engine/src/scene/geometry.rs",
    "lines": 80,
-   "bin_bytes": 503,
+   "bin_bytes": 509,
    "heat_pct": null,
    "reach": 7
   },
@@ -320,8 +320,8 @@
   },
   {
    "path": "./engine/src/scene/session/mod.rs",
-   "lines": 167,
-   "bin_bytes": 3790,
+   "lines": 178,
+   "bin_bytes": 3694,
    "heat_pct": null,
    "reach": 0
   },
@@ -377,8 +377,8 @@
   {
    "path": "./src/job.rs",
    "lines": 172,
-   "bin_bytes": 3919,
-   "heat_pct": null,
+   "bin_bytes": 3928,
+   "heat_pct": 0.84,
    "reach": 8
   },
   {
@@ -398,22 +398,22 @@
   {
    "path": "./src/queue.rs",
    "lines": 235,
-   "bin_bytes": 12683,
-   "heat_pct": null,
+   "bin_bytes": 12813,
+   "heat_pct": 0.84,
    "reach": 6
   },
   {
    "path": "./src/queue_tests.rs",
    "lines": 107,
    "bin_bytes": null,
-   "heat_pct": null,
+   "heat_pct": 1.69,
    "reach": 0
   },
   {
    "path": "./src/runner.rs",
    "lines": 182,
-   "bin_bytes": 11228,
-   "heat_pct": null,
+   "bin_bytes": 11339,
+   "heat_pct": 0.84,
    "reach": 3
   },
   {
@@ -426,38 +426,38 @@
   {
    "path": "./src/tui/actions.rs",
    "lines": 102,
-   "bin_bytes": 5281,
+   "bin_bytes": 5296,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./src/tui/draw.rs",
    "lines": 178,
-   "bin_bytes": 10974,
+   "bin_bytes": 11006,
    "heat_pct": null,
    "reach": 2
   },
   {
    "path": "./src/tui/form.rs",
    "lines": 254,
-   "bin_bytes": 6673,
+   "bin_bytes": 6757,
    "heat_pct": null,
    "reach": 3
   },
   {
    "path": "./src/tui/keys.rs",
    "lines": 217,
-   "bin_bytes": 9655,
+   "bin_bytes": 9727,
    "heat_pct": null,
    "reach": 1
   },
   {
    "path": "./src/tui/mod.rs",
    "lines": 161,
-   "bin_bytes": 6513,
+   "bin_bytes": 6590,
    "heat_pct": null,
    "reach": 0
   }
  ],
- "notes": "reach counts referencing files (shared file names qualified by ancestor dir); bin_bytes from newest workspace dev rlib per crate via nm (inlining approx, bins re-link the same code; shims excluded, foreign paths never attributed);"
+ "notes": "reach counts referencing files (shared file names qualified by ancestor dir); bin_bytes from newest workspace dev rlib per crate via nm (inlining approx, bins re-link the same code; shims excluded, foreign paths never attributed); heat from 237 attributed samples over 48/204 binaries at 10Hz incl. one child level; every repo-resolving frame counts;"
 }

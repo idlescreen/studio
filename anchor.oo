@@ -1,0 +1,11 @@
+// # idle-studio Root Project Anchor
+//
+// Logline: Root module anchor re-exporting core, raster, ascii, and studio domain pages.
+// Setup: Pure shim.
+// Beats:
+//   1. Re-export core, raster, ascii, and studio anchors.
+
+import "core/anchor.oo";
+import "raster/anchor.oo";
+import "ascii/anchor.oo";
+import "studio/anchor.oo";

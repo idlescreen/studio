@@ -1,0 +1,37 @@
+// # Terminal Cell - Glyph Cell Value Type and Packed RGB
+//
+// Logline: Terminal cell definition, cell equality, and 8-bit RGB channel packing and accessors.
+// Setup: Pure data and arithmetic. Operates with zero ambient authority. CellGrid lives in core/grid.oo, LcgRng in core/lcg.oo.
+// Beats:
+//   1. Pack 8-bit RGB channels into one Int and expose channel accessors.
+//   2. Construct styled terminal cells for grid writes.
+//   3. Compare cells field-by-field for damage tracking.
+
+pub type TerminalCell = struct {
+    ch: String,
+    fg: Int,
+    bg: Int,
+    bold: Bool
+};
+
+pub fn cell_new(ch: String, fg: Int, bg: Int, bold: Bool) -> TerminalCell {
+    let r: TerminalCell = TerminalCell { ch: ch, fg: fg, bg: bg, bold: bold };
+    return r;
+}
+
+pub fn cell_default() -> TerminalCell {
+    let r: TerminalCell = TerminalCell { ch: " ", fg: 16446712, bg: 0, bold: false };
+    return r;
+}
+
+pub fn cell_eq(a: TerminalCell, b: TerminalCell) -> Bool {
+    return a.ch == b.ch && a.fg == b.fg && a.bg == b.bg && a.bold == b.bold;
+}
+
+pub fn rgb(r: Int, g: Int, b: Int) -> Int {
+    return (r << 16) | (g << 8) | b;
+}
+
+pub fn rgb_r(c: Int) -> Int { return (c >> 16) & 255; }
+pub fn rgb_g(c: Int) -> Int { return (c >> 8) & 255; }
+pub fn rgb_b(c: Int) -> Int { return c & 255; }

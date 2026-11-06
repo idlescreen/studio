@@ -1,0 +1,97 @@
+// # Wordmark Presets - Bevelled Brand Strings, OS Normalisation, and Palettes
+//
+// Logline: Brand-word normalisation, 16-bit SNES vertical chrome bevel colours, and preset palettes.
+// Setup: Pure tables and colour ramps. Palette gradients run emerald->cyan for openooda, gold+cyan for superfedora, blue for fedora/arch.
+// Beats:
+//   1. Clean raw OS strings to crisp uppercase brand words (FEDORA, ARCH, SUPERFEDORA, UBUNTU, etc.).
+//   2. Compute the 16-bit SNES vertical chrome bevel colour for banner scanlines.
+//   3. Shade preset letter columns with time shimmer.
+
+import "core/cell.oo";
+import "ascii/canvas.oo";
+
+pub fn wm_presets() -> List[String] {
+    let mut out: List[String] = list_new();
+    out = list_push(out, "openooda");
+    out = list_push(out, "superfedora");
+    out = list_push(out, "fedora");
+    out = list_push(out, "arch");
+    return out;
+}
+
+pub fn wm_clean_os(raw: String) -> String {
+    let mut s: String = str_trim(raw);
+    let p: Int = str_index_of(s, "(");
+    if p >= 0 { s = str_trim(str_slice(s, 0, p)); }
+    let up: String = to_uppercase(s);
+    if up == "" || up == "UNKNOWN" { return "IDLESCREEN"; }
+    if str_index_of(up, "SUPERFEDORA") >= 0 || (str_index_of(up, "SUPER") >= 0 && str_index_of(up, "FEDORA") >= 0) { return "SUPERFEDORA"; }
+    if str_index_of(up, "OPENOODA") >= 0 { return "OPENOODA"; }
+    let known: List[String] = str_split("FEDORA|ARCH|UBUNTU|DEBIAN|ALPINE|OPENSUSE|VOID|GENTOO|MANJARO|NIXOS|RHEL|CENTOS|ROCKY|ALMA|SOLUS|CACHYOS|ENDEAVOUROS|GARUDA|NOBARA|BAZZITE|MINT|POP|KALI", "|");
+    let mut i: Int = 0;
+    while i < list_len(known) {
+        let kw: String = list_get(known, i);
+        if str_index_of(up, kw) >= 0 { return kw; }
+        i = i + 1;
+    }
+    let sp: Int = str_index_of(up, " ");
+    if sp > 0 { return str_slice(up, 0, sp); }
+    return up;
+}
+
+pub fn wm_text(name: String) -> String {
+    let tr: String = str_trim(name);
+    let n: String = to_lowercase(tr);
+    if n == "" || n == "os" || n == "host" { return "FEDORA"; }
+    if n == "openooda" { return "OPENOODA"; }
+    if n == "superfedora" || n == "super fedora" { return "SUPERFEDORA"; }
+    if n == "fedora" { return "FEDORA"; }
+    if n == "arch" { return "ARCH"; }
+    return to_uppercase(tr);
+}
+
+pub fn wm_known(name: String) -> Bool {
+    let tr: String = str_trim(name);
+    let n: String = to_lowercase(tr);
+    return n == "openooda" || n == "superfedora" || n == "fedora" || n == "arch";
+}
+
+pub fn wm_bevel_color(y: Int, min_y: Int, max_y: Int, is_sf: Bool) -> Int {
+    let mut span: Int = max_y - min_y + 1;
+    if span < 1 { span = 1; }
+    let mut rel_y: Int = y - min_y;
+    if rel_y < 0 { rel_y = 0; }
+    let super_rows: Int = if !is_sf { 0 } else if span >= 18 { 6 } else if span >= 6 { (span * 3) / 7 } else { 0 };
+    if super_rows > 0 && rel_y < super_rows {
+        let band: Int = (rel_y * 6) / super_rows;
+        if band <= 1 { return rgb(255, 240, 130); }
+        if band <= 3 { return rgb(255, 205, 55); }
+        return rgb(235, 155, 30);
+    }
+    let f_start: Int = if super_rows > 0 { super_rows + 1 } else { 0 };
+    let mut f_span: Int = span - f_start;
+    if f_span < 1 { f_span = 1; }
+    let mut f_y: Int = rel_y - f_start;
+    if f_y < 0 { f_y = 0; }
+    let band2: Int = (f_y * 10) / f_span;
+    if band2 <= 1 { return rgb(170, 245, 255); }
+    if band2 <= 4 { return rgb(100, 205, 255); }
+    if band2 <= 7 { return rgb(81, 162, 218); }
+    return rgb(52, 118, 220);
+}
+
+pub fn wm_column_color(name: String, col: Int, total: Int, tick: Int) -> Int {
+    let n: String = to_lowercase(str_trim(name));
+    let mut frac: Int = if total <= 1 { 50 } else { col * 100 / (total - 1) };
+    if n == "openooda" {
+        frac = (frac + (tick % 60)) % 100;
+        return cv_mix(rgb(64, 224, 168), rgb(80, 160, 255), frac * 255 / 100);
+    }
+    if n == "arch" {
+        return cv_mix(rgb(23, 147, 209), rgb(120, 220, 255), frac * 255 / 100);
+    }
+    return cv_mix(rgb(81, 162, 218), rgb(170, 245, 255), frac * 255 / 100);
+}
+
+pub fn wm_shadow_color() -> Int { return rgb(36, 66, 138); }
+pub fn wm_hi_gain() -> Int { return 60; }

@@ -1,0 +1,156 @@
+// # Studio Director TUI (`idle-studio`)
+//
+// Logline: Interactive terminal Director TUI for configuring 16-bit scene exports, live previewing, and managing the render queue.
+// Setup: Requires FfiCap for raw terminal mode and alternate screen, plus FsReadCap, FsWriteCap, ProcessCap, and EnvCap for queue persistence and execution.
+// Beats:
+//   1. Render the split-pane Director TUI showing the live 16-bit scene preview, export parameters (`effect`, `text`, `duration`, `resolution`, `fps`, `crf`, `output`), and job queue.
+//   2. Handle keyboard navigation (`j/k`/arrows for field focus, `h/l`/left/right for scene/parameter cycling, `n`/`s` to enqueue, `r`/Enter to run, `q`/Esc to quit).
+//   3. Persist and execute queued export jobs in place and restore terminal cursor/screen state on exit.
+
+import "std/core/primitives/str.oo";
+import "std/fs/process/process.oo";
+import "ascii/effects.oo";
+import "ascii/engine.oo";
+import "ascii/draw/ansi.oo";
+import "studio/job_spec.oo";
+import "studio/render.oo";
+import "studio/queue.oo";
+
+fn tui_link_probe() -> Int {
+    return hot_reload("idlescreen-tui-tier");
+}
+
+type StudioTuiState = struct {
+    running: Bool,
+    focus: Int,
+    effect_idx: Int,
+    text: String,
+    dur_idx: Int,
+    res_idx: Int,
+    fps_idx: Int,
+    crf: Int,
+    dry_run: Bool,
+    status_msg: String,
+    qpath: String
+};
+
+fn dur_str(idx: Int) -> String {
+    if idx == 0 { return "5s"; }
+    if idx == 1 { return "10s"; }
+    if idx == 2 { return "30s"; }
+    return "60s";
+}
+
+fn res_w(idx: Int) -> Int {
+    if idx == 0 { return 1280; }
+    if idx == 1 { return 1920; }
+    return 3840;
+}
+
+fn res_h(idx: Int) -> Int {
+    if idx == 0 { return 720; }
+    if idx == 1 { return 1080; }
+    return 2160;
+}
+
+fn fps_val(idx: Int) -> Int {
+    if idx == 0 { return 30; }
+    if idx == 1 { return 60; }
+    return 120;
+}
+
+fn build_spec(st: StudioTuiState) -> RenderSpec {
+    let eff: String = effects_name(st.effect_idx);
+    let dstr: String = dur_str(st.dur_idx);
+    return RenderSpec {
+        effect: eff,
+        text: st.text,
+        seed: 12648430,
+        fps: fps_val(st.fps_idx),
+        duration: dstr,
+        dur_secs: parse_duration_secs(dstr),
+        width: res_w(st.res_idx),
+        height: res_h(st.res_idx),
+        crf: st.crf,
+        format: "mp4",
+        container: "mkv",
+        output: "/tmp/idlescreen-" + eff + ".mkv",
+        dry_run: st.dry_run
+    };
+}
+
+fn render_tui_screen(st: StudioTuiState, entries: List[StudioQueueEntry], tick: Int) -> String {
+    let mut eb: List[Int] = bytes_new(); eb = bytes_push(eb, 27);
+    let e0: String = bytes_to_str(eb);
+    let eff: String = effects_name(st.effect_idx);
+    let prev: String = engine_preview_wordmark(72, 10, eff, tick, false, st.text);
+    let m0: String = if st.focus == 0 { ">" } else { " " };
+    let m1: String = if st.focus == 1 { ">" } else { " " };
+    let m2: String = if st.focus == 2 { ">" } else { " " };
+    let m3: String = if st.focus == 3 { ">" } else { " " };
+    let m4: String = if st.focus == 4 { ">" } else { " " };
+    let m5: String = if st.focus == 5 { ">" } else { " " };
+    let mut out: String = ansi_home() + prev + "\r\n";
+    out = out + e0 + "[1;36m╔══ IdleScreen Studio 5.0.1 — Director (openOODA .oo) ═════════════════╗" + e0 + "[0m" + e0 + "[K\r\n";
+    out = out + "  " + m0 + " effect     : " + eff + " (" + (st.effect_idx + 1).to_string() + "/53)" + e0 + "[K\r\n";
+    out = out + "  " + m1 + " text       : " + st.text + e0 + "[K\r\n";
+    out = out + "  " + m2 + " duration   : " + dur_str(st.dur_idx) + e0 + "[K\r\n";
+    out = out + "  " + m3 + " resolution : " + res_w(st.res_idx).to_string() + "x" + res_h(st.res_idx).to_string() + e0 + "[K\r\n";
+    out = out + "  " + m4 + " fps / crf  : " + fps_val(st.fps_idx).to_string() + " fps  (CRF " + st.crf.to_string() + ")" + e0 + "[K\r\n";
+    out = out + "  " + m5 + " dry_run    : " + (if st.dry_run { "yes" } else { "no" }) + "  -> /tmp/idlescreen-" + eff + ".mkv" + e0 + "[K\r\n";
+    out = out + e0 + "[1;33m  Queue (" + list_len(entries).to_string() + " job(s)) — [j/k] Field  [h/l] Adjust  [n/s] Enqueue  [r] Run  [q] Quit" + e0 + "[0m" + e0 + "[K\r\n";
+    out = out + "  status: " + st.status_msg + e0 + "[K";
+    return out;
+}
+
+pub fn run_studio_tui(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, ffi: &FfiCap, qpath: String) -> Int {
+    if oo_tui_enable_raw(ffi, "").is_err() {
+        println("idle-studio: terminal raw mode unavailable (use CLI subcommands: enqueue, list, run)");
+        return 1;
+    }
+    let _ = oo_tui_alt_screen_enter(ffi);
+    let _ = oo_tui_show_cursor(ffi, 0);
+    let mut st: StudioTuiState = StudioTuiState {
+        running: true, focus: 0, effect_idx: 1, text: "IDLESCREEN",
+        dur_idx: 1, res_idx: 0, fps_idx: 0, crf: 35, dry_run: false,
+        status_msg: "Ready — press n/s to enqueue or r to export", qpath: qpath
+    };
+    let mut tick: Int = 0;
+    while st.running {
+        let raw: String = match read_file(fs_r, st.qpath) { Ok(v) => v, Err(_) => "" };
+        let entries: List[StudioQueueEntry] = queue_from_text(raw);
+        let _w: Result[String, String] = oo_tui_write(ffi, render_tui_screen(st, entries, tick));
+        let k: String = match oo_tui_read_byte_timeout(ffi, "", 50) { Ok(v) => v, Err(_) => "" };
+        if k != "" {
+            let b: Int = byte_at(k, 0);
+            if b == 113 || b == 81 || b == 27 { st.running = false; }
+            else if b == 106 || b == 9 { st.focus = (st.focus + 1) % 6; }
+            else if b == 107 { st.focus = (st.focus + 5) % 6; }
+            else if b == 108 || b == 104 {
+                let d: Int = if b == 108 { 1 } else { -1 };
+                if st.focus == 0 { st.effect_idx = (st.effect_idx + 53 + d) % 53; }
+                else if st.focus == 1 { st.text = if st.text == "IDLESCREEN" { "OPENOODA" } else if st.text == "OPENOODA" { "SUPERFEDORA" } else { "IDLESCREEN" }; }
+                else if st.focus == 2 { st.dur_idx = (st.dur_idx + 4 + d) % 4; }
+                else if st.focus == 3 { st.res_idx = (st.res_idx + 3 + d) % 3; }
+                else if st.focus == 4 { st.fps_idx = (st.fps_idx + 3 + d) % 3; }
+                else if st.focus == 5 { st.dry_run = !st.dry_run; }
+            } else if b == 110 || b == 115 {
+                let sp: RenderSpec = build_spec(st);
+                let id: String = next_job_id(entries);
+                let next_e: List[StudioQueueEntry] = list_push(entries, StudioQueueEntry { id: id, status: "pending", spec: sp });
+                let _sv: Bool = save_queue(proc, fs_w, st.qpath, next_e);
+                st.status_msg = "Enqueued " + id + " (" + sp.effect + " -> " + sp.output + ")";
+            } else if b == 114 || b == 13 {
+                let mut rargs: List[String] = list_new();
+                rargs = list_push(rargs, "--all");
+                let _rc: Int = cmd_studio_cli(fs_r, fs_w, proc, st.qpath, "run", rargs);
+                st.status_msg = "Completed queue export run";
+            }
+        }
+        tick = tick + 1;
+    }
+    let _ = oo_tui_show_cursor(ffi, 1);
+    let _ = oo_tui_alt_screen_leave(ffi);
+    let _ = oo_tui_disable_raw(ffi, "");
+    return 0;
+}

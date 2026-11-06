@@ -1,0 +1,127 @@
+// # Studio Job Spec & Duration Parser
+//
+// Logline: Parses human duration strings (`10s`, `5m`, `2h`, `1d`) and CLI/JSON render job specifications for the offline exporter.
+// Setup: Pure deterministic parsing and JSON serialization over the 53-scene roster.
+// Beats:
+//   1. Parse duration strings (`10s`, `5m`, `2h`, `1d`, or bare seconds) into positive seconds and compute total frames (`secs * fps`).
+//   2. Construct and validate `RenderSpec` from CLI flags (`-e`/`--effect`, `--text`, `--duration`, `--fps`, `--width`, `--height`, `--crf`, `--dry-run`, `-o`/`--output`, `--job-file`).
+//   3. Serialize and deserialize `RenderSpec` JSON documents for `idle-studio` queue persistence and `render --job-file` execution.
+
+import "std/core/primitives/str.oo";
+import "core/shell.oo";
+import "ascii/effects.oo";
+
+pub type RenderSpec = struct {
+    effect: String,
+    text: String,
+    seed: Int,
+    fps: Int,
+    duration: String,
+    dur_secs: Int,
+    width: Int,
+    height: Int,
+    crf: Int,
+    format: String,
+    container: String,
+    output: String,
+    dry_run: Bool
+};
+
+pub fn parse_pos_int(s: String) -> Int {
+    if s == "" { return -1; }
+    let mut acc: Int = 0;
+    let mut i: Int = 0;
+    while i < chars_len(s) {
+        let b: Int = byte_at(s, i);
+        if b < 48 || b > 57 { return -1; }
+        acc = acc * 10 + (b - 48);
+        i = i + 1;
+    }
+    return acc;
+}
+
+pub fn parse_duration_secs(dur: String) -> Int {
+    let t: String = str_trim(dur);
+    let n: Int = chars_len(t);
+    if n == 0 { return -1; }
+    let last: String = char_at(t, n - 1);
+    let mut mult: Int = 1;
+    let mut has_unit: Bool = false;
+    if last == "s" || last == "S" { mult = 1; has_unit = true; }
+    else if last == "m" || last == "M" { mult = 60; has_unit = true; }
+    else if last == "h" || last == "H" { mult = 3600; has_unit = true; }
+    else if last == "d" || last == "D" { mult = 86400; has_unit = true; }
+    let num_str: String = if has_unit { str_slice(t, 0, n - 1) } else { t };
+    let v: Int = parse_pos_int(num_str);
+    if v <= 0 { return -1; }
+    return v * mult;
+}
+
+pub fn default_render_spec() -> RenderSpec {
+    return RenderSpec {
+        effect: "beams",
+        text: "IDLESCREEN",
+        seed: 12648430,
+        fps: 30,
+        duration: "10s",
+        dur_secs: 10,
+        width: 1280,
+        height: 720,
+        crf: 35,
+        format: "mp4",
+        container: "mkv",
+        output: "/tmp/idlescreen-beams.mkv",
+        dry_run: false
+    };
+}
+
+pub fn spec_to_json(s: RenderSpec) -> String {
+    let dr: String = if s.dry_run { "true" } else { "false" };
+    return "{\"effect\":\"" + s.effect + "\",\"text\":\"" + s.text + "\",\"seed\":" + s.seed.to_string() + ",\"fps\":" + s.fps.to_string() + ",\"duration\":\"" + s.duration + "\",\"width\":" + s.width.to_string() + ",\"height\":" + s.height.to_string() + ",\"crf\":" + s.crf.to_string() + ",\"format\":\"" + s.format + "\",\"container\":\"" + s.container + "\",\"output\":\"" + s.output + "\",\"dry_run\":" + dr + "}";
+}
+
+fn json_extract_str(raw: String, key: String, dflt: String) -> String {
+    let pat: String = "\"" + key + "\":\"";
+    let idx: Int = str_index_of(raw, pat);
+    if idx < 0 { return dflt; }
+    let rest: String = str_slice(raw, idx + chars_len(pat), chars_len(raw));
+    let q: Int = str_index_of(rest, "\"");
+    if q < 0 { return dflt; }
+    return str_slice(rest, 0, q);
+}
+
+fn json_extract_int(raw: String, key: String, dflt: Int) -> Int {
+    let pat: String = "\"" + key + "\":";
+    let idx: Int = str_index_of(raw, pat);
+    if idx < 0 { return dflt; }
+    let rest: String = str_trim(str_slice(raw, idx + chars_len(pat), chars_len(raw)));
+    let mut digits: String = "";
+    let mut i: Int = 0;
+    while i < chars_len(rest) {
+        let b: Int = byte_at(rest, i);
+        if b >= 48 && b <= 57 { digits = digits + char_at(rest, i); }
+        else { break; }
+        i = i + 1;
+    }
+    let v: Int = parse_pos_int(digits);
+    return if v >= 0 { v } else { dflt };
+}
+
+pub fn spec_from_json(raw: String) -> RenderSpec {
+    let mut s: RenderSpec = default_render_spec();
+    s.effect = json_extract_str(raw, "effect", s.effect);
+    s.text = json_extract_str(raw, "text", s.text);
+    s.seed = json_extract_int(raw, "seed", s.seed);
+    s.fps = json_extract_int(raw, "fps", s.fps);
+    s.duration = json_extract_str(raw, "duration", s.duration);
+    let ds: Int = parse_duration_secs(s.duration);
+    s.dur_secs = if ds > 0 { ds } else { 10 };
+    s.width = json_extract_int(raw, "width", s.width);
+    s.height = json_extract_int(raw, "height", s.height);
+    s.crf = json_extract_int(raw, "crf", s.crf);
+    s.format = json_extract_str(raw, "format", s.format);
+    s.container = json_extract_str(raw, "container", s.container);
+    s.output = json_extract_str(raw, "output", s.output);
+    s.dry_run = str_contains(raw, "\"dry_run\":true") || str_contains(raw, "\"dry_run\": true");
+    return s;
+}

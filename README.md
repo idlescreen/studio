@@ -1,4 +1,4 @@
-# studio
+# studio (`idle-studio` + `render`) — v5.0.1 (100% Native openOODA `.oo`)
 
 <div align="center">
 
@@ -26,39 +26,28 @@
 
 </div>
 
-Offline saver → video rendering: the `render` engine (headless simulation →
-AV1/H.264/PNG/raw via ffmpeg) plus `idle-studio`, the Director TUI for
-queueing and tuning export jobs. The engine links the daemon's rendering core
-directly, so an export runs **the daemon's own 53 scenes** — the same scenes
-the screensaver draws on screen, not a re-implementation. Companion to the
-[IdleScreen](https://idlescreen.github.io) (`v4.8.2`) monorepo — high-performance
-unified single-binary Wayland screensaver and idle management suite for Linux (First-Class SuperFedora
-integration, 53 built-in 16-bit arcade & mathematical scenes, 10-bit HDR deep color, 4K 2x Hi-Res `wp_viewporter`
-GPU scaling, system theme adaptation, interactive `--tour` preview & TUI dashboard, and multi-init support across `systemd`, `OpenRC`,
-`runit`, `s6`, `dinit`, and XDG autostart).
+Offline saver -> video rendering in **100% native openOODA (`.oo`)**: the `render` engine (headless simulation -> AV1/H.264/PNG/raw) plus `idle-studio`, the Director TUI for queueing and tuning export jobs. The engine compiles the daemon's `.oo` rendering core directly (`core/*.oo`, `raster/*.oo`, `ascii/**/*.oo`), so an export runs **the daemon's own 53 scenes** — the exact same deterministic 16-bit scenes the screensaver draws on screen. Companion to the [IdleScreen](https://idlescreen.github.io) (`v5.0.1`) native openOODA monorepo.
 
-## Build & Run
-
-Build from the studio repository (with optional `target-cpu=native` SIMD tuning):
+## Build & Verify (Native `.oo`)
 
 ```sh
 git clone https://github.com/idlescreen/studio
 cd studio
-RUSTFLAGS="-C target-cpu=native" cargo build --release --workspace
+make all   # builds bin/idle-studio & bin/render, verifies 16-256 line Page Rule, runs tests & determinism check
 ```
 
 ## Commands
 
 ```sh
-idle-studio                                   # Director TUI: queue + tune export jobs
-render -e beams --duration 30s -o out.mkv     # one of the daemon's 53 scenes → AV1/Matroska
-render -e ripple --text "HELLO" --duration 30s -o out.mkv
-render -e aurora --format png -o frames/      # one PNG per frame
+./bin/idle-studio                                         # Director TUI: live preview + queue + tune export jobs
+./bin/render -e beams --duration 30s -o out.mkv           # one of the daemon's 53 scenes -> AV1/Matroska
+./bin/render -e ripple --text "OPENOODA" --duration 30s -o out.mkv
+./bin/idle-studio enqueue -e aurora --duration 10s -o /tmp/aurora.mkv
+./bin/idle-studio list
+./bin/idle-studio run --all
 ```
 
-Every scene name the daemon ships is accepted by `-e`; an unknown name is
-refused with the full list. The same `--effect`, `--text`, `--seed`,
-`--cols`, and `--rows` always produce byte-identical output, on any host.
+Every scene name the daemon ships is accepted by `-e`; an unknown name is refused fail-closed.
 
 ## License
 

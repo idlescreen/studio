@@ -1,0 +1,44 @@
+// # shade_math — neon colors and float helpers
+//
+// Logline: Bit-exact ports of neon_overdrive_rgb and the f64 helpers the math scenes need. oodac 0.11.63 has no `as` numeric casts, so conversions use exact bounded loops instead.
+//
+// Setup: Pure functions. Colors are packed 0xRRGGBB into Int. No caps. int_to_f/float_idx are exact for |n| < 4096 (all probe uses qualify). Glyph mapping lives in pixel_glyph.oo.
+//
+// Beats:
+//   1. neon_rgb boosts a packed color exactly like neon_overdrive_rgb.
+//   2. neon_chan derives one channel's spread from the floor and scale.
+//   3. imin/imax keep the int clamps callers rely on; float helpers live in tests/shade_float.oo.
+
+pub fn imin(a: Int, b: Int) -> Int {
+    if a < b { return a; }
+    return b;
+}
+
+pub fn imax(a: Int, b: Int) -> Int {
+    if a > b { return a; }
+    return b;
+}
+
+fn neon_chan(v: Int, fl: Int, scale: Int) -> Int {
+    let spread: Int = imax(v - fl, 0) * scale;
+    return imin(spread / 256, 255);
+}
+
+pub fn neon_rgb(packed: Int) -> Int {
+    let r: Int = (packed / 65536) % 256;
+    let g: Int = (packed / 256) % 256;
+    let b: Int = packed % 256;
+    let max_c: Int = imax(r, imax(g, b));
+    if max_c == 0 { return 81 * 65536 + 150 * 256 + 218; }
+    let min_c: Int = imin(r, imin(g, b));
+    let chroma: Int = max_c - min_c;
+    let fl: Int = min_c / 3 + min_c / 4;
+    let denom: Int = imax(max_c - fl, 1);
+    let tm: Int = imin(imax(max_c, 175) + chroma / 4, 255);
+    let scale: Int = (tm * 256) / denom;
+    return neon_chan(r, fl, scale) * 65536 + neon_chan(g, fl, scale) * 256 + neon_chan(b, fl, scale);
+}
+
+pub fn pack_rgb(r: Int, g: Int, b: Int) -> Int {
+    return r * 65536 + g * 256 + b;
+}

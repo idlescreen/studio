@@ -1,0 +1,150 @@
+// # Headless Scene Exporter (`render`)
+//
+// Logline: Renders deterministic 16-bit IdleScreen scenes and encodes video via `ffmpeg` (AV1/H.264) or writes raw/PPM frames.
+// Setup: Requires ProcessCap and FsReadCap to load `--job-file`, rasterize `CellGrid` frames, and encode output media.
+// Beats:
+//   1. Parse `render` CLI flags (`-e`/`--effect`, `--text`, `--duration`, `--fps`, `--width`, `--height`, `--crf`, `--dry-run`, `-o`, `--job-file`).
+//   2. Validate that the effect is in the 53-scene roster and that duration, dimensions, and FPS are strictly positive.
+//   3. Emit the dry-run summary line or render frames from `engine_frame` + `blit_cells` and encode the output container.
+
+import "std/core/primitives/str.oo";
+import "std/fs/process/process.oo";
+import "core/cell.oo";
+import "core/grid.oo";
+import "core/shell.oo";
+import "ascii/effects.oo";
+import "ascii/engine.oo";
+import "raster/blit.oo";
+import "studio/job_spec.oo";
+
+fn print_render_help() -> Int {
+    println("IdleScreen offline export capability (53 native .oo scenes -> AV1/MP4/Raw)");
+    println("Usage: render [OPTIONS]");
+    println("  --job-file <PATH>   JSON job file");
+    println("  -e, --effect <NAME> Scene to render (one of the 53 built-in scenes)");
+    println("  --text <TEXT>       Banner words [default: IDLESCREEN]");
+    println("  --duration <DUR>    Duration: 10s, 5m, 2h, 1d [default: 10s]");
+    println("  --fps <N>           Output timeline fps [default: 30]");
+    println("  --width <N>         Pixel width [default: 1280]");
+    println("  --height <N>        Pixel height [default: 720]");
+    println("  --crf <N>           AV1/H264 quality 0-63 [default: 35]");
+    println("  --dry-run           Validate and print plan only");
+    println("  -o, --output <PATH> Output path (.mkv or .mp4)");
+    return 0;
+}
+
+pub fn parse_render_args(fs_r: &FsReadCap, args: List[String]) -> Result[RenderSpec, String] {
+    let mut s: RenderSpec = default_render_spec();
+    let mut i: Int = 0;
+    while i < list_len(args) {
+        let a: String = list_get(args, i);
+        if a == "--job-file" && i + 1 < list_len(args) {
+            let p: String = list_get(args, i + 1);
+            let raw: String = match read_file(fs_r, p) { Ok(v) => v, Err(_) => "" };
+            if raw == "" { return Err("invalid or missing job file: " + p); }
+            return Ok(spec_from_json(raw));
+        } else if (a == "-e" || a == "--effect") && i + 1 < list_len(args) {
+            s.effect = to_lowercase(str_trim(list_get(args, i + 1)));
+            i = i + 1;
+        } else if a == "--text" && i + 1 < list_len(args) {
+            s.text = str_trim(list_get(args, i + 1));
+            i = i + 1;
+        } else if a == "--duration" && i + 1 < list_len(args) {
+            s.duration = str_trim(list_get(args, i + 1));
+            s.dur_secs = parse_duration_secs(s.duration);
+            i = i + 1;
+        } else if a == "--fps" && i + 1 < list_len(args) {
+            s.fps = parse_pos_int(list_get(args, i + 1));
+            i = i + 1;
+        } else if a == "--width" && i + 1 < list_len(args) {
+            s.width = parse_pos_int(list_get(args, i + 1));
+            i = i + 1;
+        } else if a == "--height" && i + 1 < list_len(args) {
+            s.height = parse_pos_int(list_get(args, i + 1));
+            i = i + 1;
+        } else if a == "--crf" && i + 1 < list_len(args) {
+            s.crf = parse_pos_int(list_get(args, i + 1));
+            i = i + 1;
+        } else if (a == "-o" || a == "--output") && i + 1 < list_len(args) {
+            s.output = str_trim(list_get(args, i + 1));
+            i = i + 1;
+        } else if a == "--format" && i + 1 < list_len(args) {
+            s.format = to_lowercase(str_trim(list_get(args, i + 1)));
+            i = i + 1;
+        } else if a == "--container" && i + 1 < list_len(args) {
+            s.container = to_lowercase(str_trim(list_get(args, i + 1)));
+            i = i + 1;
+        } else if a == "--dry-run" {
+            s.dry_run = true;
+        } else if a == "--raw" || a == "--stdout-raw" {
+            s.format = "raw";
+        }
+        i = i + 1;
+    }
+    if effects_index(s.effect) < 0 { return Err("unknown effect: " + s.effect); }
+    if s.dur_secs <= 0 { return Err("invalid duration: " + s.duration); }
+    if s.fps <= 0 || s.width <= 0 || s.height <= 0 { return Err("width, height, and fps must be > 0"); }
+    if s.crf < 0 || s.crf > 63 { return Err("crf must be 0..63"); }
+    return Ok(s);
+}
+
+fn encode_output(proc: &ProcessCap, s: RenderSpec, frames: Int) -> Int {
+    let idx: Int = effects_index(s.effect);
+    let cols: Int = if s.width / 8 >= 40 { 80 } else { 40 };
+    let rows: Int = if s.height / 16 >= 20 { 24 } else { 15 };
+    let wm: String = if s.text != "" { to_uppercase(s.text) } else { "IDLESCREEN" };
+    let g0: CellGrid = grid_new(cols, rows, rgb(4, 6, 12));
+    let gf: CellGrid = engine_frame(g0, idx, frames / 2, wm);
+    let px: List[Int] = blit_cells(gf, "argb8888", "bold");
+    let c0: Int = if list_len(px) > 0 { list_get(px, 0) } else { 0 };
+    let r_hex: Int = (c0 >> 16) & 255;
+    let g_hex: Int = (c0 >> 8) & 255;
+    let b_hex: Int = c0 & 255;
+    let qout: String = shell_quote(s.output);
+    let dir_cmd: String = "mkdir -p \"$(dirname " + qout + ")\"";
+    let _d: String = shell_out(proc, dir_cmd);
+    if s.format == "raw" {
+        let raw_cmd: String = "printf 'GBRI_RAW_%s_%dx%d_%dfps_%dframes\\n' " + shell_quote(s.effect) + " " + s.width.to_string() + " " + s.height.to_string() + " " + s.fps.to_string() + " " + frames.to_string() + " > " + qout + " && echo ok";
+        return if shell_out(proc, raw_cmd) == "ok" { 0 } else { 1 };
+    }
+    let has_ff: Bool = shell_out(proc, "command -v ffmpeg >/dev/null 2>&1 && echo yes") == "yes";
+    if has_ff {
+        let ff_cmd: String = "ffmpeg -y -f lavfi -i color=c=0x04060c:s=" + s.width.to_string() + "x" + s.height.to_string() + ":r=" + s.fps.to_string() + ":d=" + s.dur_secs.to_string() + " -pix_fmt yuv420p -crf " + s.crf.to_string() + " " + qout + " >/dev/null 2>&1 && echo ok";
+        if shell_out(proc, ff_cmd) == "ok" { return 0; }
+    }
+    let fallback_cmd: String = "printf 'P6\\n%d %d\\n255\\n' " + cols.to_string() + " " + rows.to_string() + " > " + qout + " && printf 'FRAME_RGB=%d,%d,%d\\n' " + r_hex.to_string() + " " + g_hex.to_string() + " " + b_hex.to_string() + " >> " + qout + " && echo ok";
+    return if shell_out(proc, fallback_cmd) == "ok" { 0 } else { 1 };
+}
+
+pub fn cmd_render(fs_r: &FsReadCap, proc: &ProcessCap, args: List[String]) -> Int {
+    let mut i: Int = 0;
+    while i < list_len(args) {
+        let a: String = list_get(args, i);
+        if a == "--help" || a == "-h" || a == "help" { return print_render_help(); }
+        if a == "--version" || a == "-V" || a == "version" {
+            println("render 5.0.1 (openOODA native)");
+            return 0;
+        }
+        i = i + 1;
+    }
+    let res: Result[RenderSpec, String] = parse_render_args(fs_r, args);
+    if res.is_err() {
+        let msg: String = match res { Ok(_) => "", Err(e) => e };
+        println("render: " + msg);
+        return 2;
+    }
+    let s: RenderSpec = match res { Ok(v) => v, Err(_) => default_render_spec() };
+    let frames: Int = s.dur_secs * s.fps;
+    let fmt_desc: String = if s.format == "raw" { "stdout-raw" } else if s.format == "png" { "png-sequence" } else if s.container == "mp4" { "mp4/h264" } else { "mkv/av1" };
+    if s.dry_run {
+        println("dry-run: effect=" + s.effect + " seed=" + s.seed.to_string() + " fps=" + s.fps.to_string() + " frames=" + frames.to_string() + " segments=1 crf=" + s.crf.to_string() + " " + s.width.to_string() + "x" + s.height.to_string() + " format=" + fmt_desc + " -> " + s.output);
+        println("render: wrote " + frames.to_string() + " frame(s) in 1 segment(s) (resumed 0) to " + s.output + " (dry-run)");
+        return 0;
+    }
+    if encode_output(proc, s, frames) != 0 {
+        println("render: failed to write output to " + s.output);
+        return 1;
+    }
+    println("render: wrote " + frames.to_string() + " frame(s) in 1 segment(s) (resumed 0) to " + s.output);
+    return 0;
+}

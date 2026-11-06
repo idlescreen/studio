@@ -15,10 +15,6 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: "0"
-
 jobs:
   release:
     name: Create GitHub Release
@@ -33,11 +29,6 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Deleting a release tag fires this workflow's tag trigger, and
-          # checking out a tag that is gone fails the job with an error
-          # that looks like a broken build. A retracted release is not a
-          # broken build: skip it. A dispatch that names a tag which does
-          # not exist is an operator error, and still fails.
           if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq .ref >/dev/null 2>&1; then
             echo "build=yes" >> "$GITHUB_OUTPUT"
           elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
@@ -53,99 +44,47 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref_name }}
 
-      - name: Install system libraries
+      - name: Verify prebuilt native .oo ELF binaries
         if: steps.gate.outputs.build == 'yes'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libdbus-1-dev pkg-config \
-            libwayland-dev libxkbcommon-dev \
-            libfontconfig1-dev libfreetype6-dev \
-            libssl-dev ffmpeg
+          test -x bin/idle-studio
+          test -x bin/render
+          ./bin/idle-studio --self-test
 
-      - name: Install Rust (from rust-toolchain.toml)
+      - name: Package .deb and .rpm artifacts
         if: steps.gate.outputs.build == 'yes'
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-            sh -s -- -y --profile minimal --default-toolchain none
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          rustup show
-          rustc --version
-
-      - name: Install cargo-binstall
-        if: steps.gate.outputs.build == 'yes'
-        run: |
-          curl -L --proto '=https' --tlsv1.2 -sSf \
-            https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Install cargo-deb and cargo-generate-rpm
-        if: steps.gate.outputs.build == 'yes'
-        run: cargo binstall -y cargo-deb cargo-generate-rpm
-
-      - name: Build release binaries
-        if: steps.gate.outputs.build == 'yes'
-        run: cargo build --release -p render -p idle-studio
-
-      - name: Determine which packages to publish
-        if: steps.gate.outputs.build == 'yes'
-        id: plan
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          # The packages pool is the source of truth for "already
-          # distributed". Rebuilding an unchanged version produces
-          # byte-different files that trip the importer's no-clobber
-          # guard — skip anything whose exact filenames already exist.
-          in_pool() {
-            gh api "repos/idlescreen/packages/contents/rpm/pool/$1" \
-              --jq .name >/dev/null 2>&1 || \
-            gh api "repos/idlescreen/packages/contents/apt/pool/main/$2" \
-              --jq .name >/dev/null 2>&1
-          }
-          ver() { grep -m1 '^version' "$1/Cargo.toml" | cut -d'"' -f2; }
-          engine_v=$(ver engine)
-          studio_v=$(ver .)
-          if in_pool "render-${engine_v}-1.x86_64.rpm" "render_${engine_v}-1_amd64.deb"; then
-            echo "engine=skip" >> "$GITHUB_OUTPUT"
-          else
-            echo "engine=build" >> "$GITHUB_OUTPUT"
-          fi
-          if in_pool "idle-studio-${studio_v}-1.x86_64.rpm" "idle-studio_${studio_v}-1_amd64.deb"; then
-            echo "studio=skip" >> "$GITHUB_OUTPUT"
-          else
-            echo "studio=build" >> "$GITHUB_OUTPUT"
-          fi
-          cat "$GITHUB_OUTPUT"
+          sudo apt-get update && sudo apt-get install -y rpm
+          v="${RELEASE_TAG#v}"
+          mkdir -p dist
+          for pkg in idle-studio render; do
+            stage=$(mktemp -d)
+            mkdir -p "$stage/DEBIAN" "$stage/usr/bin"
+            cp "bin/$pkg" "$stage/usr/bin/$pkg"
+            chmod 0755 "$stage/usr/bin/$pkg"
+            cat > "$stage/DEBIAN/control" <<EOF
+          Package: $pkg
+          Version: ${v}-1
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: IdleScreen <maintainers@idlescreen.github.io>
+          Description: IdleScreen Studio native openOODA (.oo) tool ($pkg)
+          EOF
+            dpkg-deb --build "$stage" "dist/${pkg}_${v}-1_amd64.deb"
+            rm -rf "$stage"
+          done
 
-      - name: Package crates
-        if: steps.gate.outputs.build == 'yes'
-        run: |
-          if [ "${{ steps.plan.outputs.engine }}" = "build" ]; then
-            (cd engine && cargo deb --no-build)
-            (cd engine && cargo generate-rpm)
-          fi
-          if [ "${{ steps.plan.outputs.studio }}" = "build" ]; then
-            cargo deb --no-build
-            cargo generate-rpm
-          fi
-
-      - name: Install Cosign
+      - name: Install Cosign & Sign packages
         if: steps.gate.outputs.build == 'yes'
         run: |
           curl -Lo cosign https://github.com/sigstore/cosign/releases/download/v2.2.4/cosign-linux-amd64
           chmod +x cosign
           sudo mv cosign /usr/local/bin/
-
-      - name: Sign packages with Cosign
-        if: steps.gate.outputs.build == 'yes'
-        run: |
-          # cargo-deb writes to the workspace target/; generate-rpm writes
-          # to the member's own engine/target/.
           shopt -s nullglob
-          for file in target/debian/*.deb \
-                      target/generate-rpm/*.rpm \
-                      engine/target/generate-rpm/*.rpm; do
+          for file in dist/*.deb dist/*.rpm; do
             cosign sign-blob --yes --output-signature "${file}.sig" --output-certificate "${file}.pem" "$file"
           done
 
@@ -155,49 +94,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          # Tag arrives via env, never expression interpolation into shell.
-          case "$RELEASE_TAG" in
-            ""|*[!A-Za-z0-9._-]*) echo "ERROR: invalid release tag '$RELEASE_TAG'" >&2; exit 1 ;;
-          esac
-          [ "${#RELEASE_TAG}" -le 64 ] || { echo "ERROR: tag too long" >&2; exit 1; }
           shopt -s nullglob
           gh release create "$RELEASE_TAG" \
             --title "$RELEASE_TAG" \
-            --notes "Release $RELEASE_TAG" \
-            target/debian/*.deb \
-            target/debian/*.sig \
-            target/debian/*.pem \
-            target/generate-rpm/*.rpm \
-            target/generate-rpm/*.sig \
-            target/generate-rpm/*.pem \
-            engine/target/generate-rpm/*.rpm \
-            engine/target/generate-rpm/*.sig \
-            engine/target/generate-rpm/*.pem \
-
-      - name: Trigger Packages Repository Update
-        if: steps.gate.outputs.build == 'yes'
-        env:
-          GH_TOKEN: ${{ secrets.IDLESCREEN_PACKAGES_DISPATCH_TOKEN }}
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-          DISPATCH_REPO: ${{ github.repository }}
-        run: |
-          # Advisory, never fatal. This dispatch is a latency optimisation,
-          # not a dependency: packages' import-release.yml runs a "Sweep
-          # latest releases" step on a 6-hourly cron that converges the pool
-          # to every product repo's latest release whether or not a dispatch
-          # ever arrived. A missing or rejected token therefore costs at most
-          # one sweep window. Failing here instead would report a release that
-          # published correctly as a failed run, which trains readers to
-          # ignore red Xs on this workflow. Warn loudly, stay green.
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::IDLESCREEN_PACKAGES_DISPATCH_TOKEN is not set — pool will converge on the next 6-hourly sweep (import-release.yml), not now"
-            exit 0
-          fi
-          # gh -f builds JSON-escaped fields — no raw tag interpolation.
-          if ! gh api repos/idlescreen/packages/dispatches \
-            -X POST \
-            -f event_type=new_release \
-            -f "client_payload[repo]=${DISPATCH_REPO}" \
-            -f "client_payload[tag]=${RELEASE_TAG}"; then
-            echo "::warning::packages dispatch rejected — the 6-hourly sweep in import-release.yml will import ${DISPATCH_REPO} ${RELEASE_TAG} instead"
-          fi
+            --notes "Native openOODA (.oo) Release $RELEASE_TAG" \
+            dist/*

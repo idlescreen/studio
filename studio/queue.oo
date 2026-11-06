@@ -1,0 +1,148 @@
+// # Studio Job Queue & CLI Subcommands (`enqueue`, `list`, `run`)
+//
+// Logline: Manages the persistent export job queue (`queue.json`) and executes queued jobs via `cmd_render`.
+// Setup: Requires FsReadCap, FsWriteCap, ProcessCap, and EnvCap to load, atomically save, and run queued render jobs.
+// Beats:
+//   1. Resolve the default queue path (`$XDG_CONFIG_HOME/idle-studio/queue.json` or `$HOME/.config/idle-studio/queue.json`).
+//   2. Parse and serialize line-delimited JSON queue entries (`id`, `status`, `spec`) and allocate collision-free `job-N` IDs.
+//   3. Implement `idle-studio enqueue`, `idle-studio list`, and `idle-studio run [--all]`.
+
+import "std/core/primitives/str.oo";
+import "core/shell.oo";
+import "studio/job_spec.oo";
+import "studio/render.oo";
+
+pub type StudioQueueEntry = struct {
+    id: String,
+    status: String,
+    spec: RenderSpec
+};
+
+pub fn default_queue_path(env: &EnvCap) -> String {
+    let xdg: String = match env_get(env, "XDG_CONFIG_HOME") { Ok(v) => str_trim(v), Err(_) => "" };
+    if xdg != "" { return xdg + "/idle-studio/queue.json"; }
+    let home: String = match env_get(env, "HOME") { Ok(v) => str_trim(v), Err(_) => "" };
+    if home != "" { return home + "/.config/idle-studio/queue.json"; }
+    return "idle-studio-queue.json";
+}
+
+pub fn queue_to_text(entries: List[StudioQueueEntry]) -> String {
+    let mut out: String = "{\"entries\":[\n";
+    let mut i: Int = 0;
+    while i < list_len(entries) {
+        let e: StudioQueueEntry = list_get(entries, i);
+        let comma: String = if i + 1 < list_len(entries) { "," } else { "" };
+        out = out + "{\"id\":\"" + e.id + "\",\"status\":\"" + e.status + "\",\"spec\":" + spec_to_json(e.spec) + "}" + comma + "\n";
+        i = i + 1;
+    }
+    out = out + "]}\n";
+    return out;
+}
+
+fn extract_quoted(line: String, key: String, dflt: String) -> String {
+    let pat: String = "\"" + key + "\":\"";
+    let idx: Int = str_index_of(line, pat);
+    if idx < 0 { return dflt; }
+    let rest: String = str_slice(line, idx + chars_len(pat), chars_len(line));
+    let q: Int = str_index_of(rest, "\"");
+    if q < 0 { return dflt; }
+    return str_slice(rest, 0, q);
+}
+
+pub fn queue_from_text(raw: String) -> List[StudioQueueEntry] {
+    let mut out: List[StudioQueueEntry] = list_new();
+    let lines: List[String] = str_split(raw, "\n");
+    let mut i: Int = 0;
+    while i < list_len(lines) {
+        let ln: String = str_trim(list_get(lines, i));
+        if str_contains(ln, "\"id\":\"") && str_contains(ln, "\"effect\":\"") {
+            let id: String = extract_quoted(ln, "id", "job-1");
+            let st: String = extract_quoted(ln, "status", "pending");
+            let sp: RenderSpec = spec_from_json(ln);
+            out = list_push(out, StudioQueueEntry { id: id, status: st, spec: sp });
+        }
+        i = i + 1;
+    }
+    return out;
+}
+
+pub fn next_job_id(entries: List[StudioQueueEntry]) -> String {
+    let mut n: Int = list_len(entries) + 1;
+    let mut searching: Bool = true;
+    while searching {
+        let cand: String = "job-" + n.to_string();
+        let mut hit: Bool = false;
+        let mut i: Int = 0;
+        while i < list_len(entries) {
+            let e: StudioQueueEntry = list_get(entries, i);
+            if e.id == cand { hit = true; }
+            i = i + 1;
+        }
+        if !hit { searching = false; } else { n = n + 1; }
+    }
+    return "job-" + n.to_string();
+}
+
+pub fn save_queue(proc: &ProcessCap, fs_w: &FsWriteCap, path: String, entries: List[StudioQueueEntry]) -> Bool {
+    let _mk: String = shell_out(proc, "mkdir -p \"$(dirname " + shell_quote(path) + ")\"");
+    let body: String = queue_to_text(entries);
+    let res: Result[Bool, String] = write_file(fs_w, path, body);
+    return !res.is_err();
+}
+
+pub fn cmd_studio_cli(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, path: String, verb: String, args: List[String]) -> Int {
+    let raw: String = match read_file(fs_r, path) { Ok(v) => v, Err(_) => "" };
+    let mut entries: List[StudioQueueEntry] = queue_from_text(raw);
+    if verb == "list" {
+        let mut i: Int = 0;
+        while i < list_len(entries) {
+            let e: StudioQueueEntry = list_get(entries, i);
+            println("[" + i.to_string() + "] " + e.id + " " + e.status + " " + e.spec.effect + " -> " + e.spec.output);
+            i = i + 1;
+        }
+        return 0;
+    }
+    if verb == "enqueue" {
+        let sp_res: Result[RenderSpec, String] = parse_render_args(fs_r, args);
+        if sp_res.is_err() {
+            println("idle-studio: " + (match sp_res { Ok(_) => "", Err(e) => e }));
+            return 1;
+        }
+        let sp: RenderSpec = match sp_res { Ok(v) => v, Err(_) => default_render_spec() };
+        let id: String = next_job_id(entries);
+        entries = list_push(entries, StudioQueueEntry { id: id, status: "pending", spec: sp });
+        let _s: Bool = save_queue(proc, fs_w, path, entries);
+        println("enqueued " + id + " -> " + path);
+        return 0;
+    }
+    if verb == "run" {
+        let mut run_all: Bool = false;
+        let mut k: Int = 0;
+        while k < list_len(args) { if list_get(args, k) == "--all" { run_all = true; } k = k + 1; }
+        let mut ran: Int = 0;
+        let mut j: Int = 0;
+        while j < list_len(entries) {
+            let mut e: StudioQueueEntry = list_get(entries, j);
+            if e.status == "pending" {
+                let mut rargs: List[String] = list_new();
+                rargs = list_push(rargs, "-e"); rargs = list_push(rargs, e.spec.effect);
+                rargs = list_push(rargs, "--text"); rargs = list_push(rargs, e.spec.text);
+                rargs = list_push(rargs, "--duration"); rargs = list_push(rargs, e.spec.duration);
+                rargs = list_push(rargs, "-o"); rargs = list_push(rargs, e.spec.output);
+                if e.spec.dry_run { rargs = list_push(rargs, "--dry-run"); }
+                let rc: Int = cmd_render(fs_r, proc, rargs);
+                e.status = if rc == 0 { "done" } else { "failed" };
+                entries = list_set(entries, j, e);
+                let _s: Bool = save_queue(proc, fs_w, path, entries);
+                println(e.status + " " + e.id);
+                ran = ran + 1;
+                if !run_all { return rc; }
+            }
+            j = j + 1;
+        }
+        if ran == 0 { println("no pending jobs"); }
+        return 0;
+    }
+    println("idle-studio: unknown command: " + verb);
+    return 1;
+}

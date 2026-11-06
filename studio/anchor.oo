@@ -1,0 +1,11 @@
+// # studio Domain Anchor
+//
+// Logline: Re-exports the job_spec, render, queue, and tui pages of IdleScreen Studio.
+// Setup: Pure shim.
+// Beats:
+//   1. Re-export job_spec, render, queue, and tui for the studio tree.
+
+import "job_spec.oo";
+import "render.oo";
+import "queue.oo";
+import "tui.oo";

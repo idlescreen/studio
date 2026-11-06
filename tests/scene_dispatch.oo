@@ -1,0 +1,51 @@
+// # scene_dispatch — .oo scene port registry
+//
+// Logline: Maps a scene name to its bit-exact parity port run.
+// Setup: Pure dispatch over the ported scene modules. Unknown names fail closed.
+// Beats:
+//   1. Match the scene name against each ported family.
+//   2. Delegate to the scene's xxx_run digest driver.
+//   3. Return Err for names with no parity port yet.
+
+import "tests/digest_run.oo";
+import "tests/oo/canvas_cells.oo";
+import "tests/oo/scenes/wave/scene_plasma.oo";
+import "tests/oo/scenes/wave/scene_ripple.oo";
+import "tests/oo/scenes/wave/scene_moire.oo";
+import "tests/oo/scenes/wave/scene_tunnel.oo";
+import "tests/oo/scenes/veil/scene_aurora.oo";
+import "tests/oo/scenes/veil/scene_chaos.oo";
+import "tests/oo/scenes/orbit/scene_metaballs.oo";
+import "tests/oo/scenes/deep/scene_radar.oo";
+import "tests/oo/scenes/deep/scene_cosmos.oo";
+import "tests/oo/scenes/deep/scene_mystify.oo";
+import "tests/oo/scenes/text/scene_expand.oo";
+import "tests/oo/scenes/wipe/scene_wipe.oo";
+import "tests/oo/scenes/wipe/scene_sweep.oo";
+import "tests/oo/scenes/wipe/scene_slide.oo";
+import "tests/oo/scenes/wipe/scene_middleout.oo";
+import "tests/oo/scenes/bpath/scene_binarypath.oo";
+import "tests/oo/scenes/burn/scene_burn.oo";
+import "tests/oo/scenes/bhole/scene_blackhole.oo";
+
+pub fn dispatch_scene(name: String, cells: List[CellGeom], info: CanvasInfo, lines: List[String]) -> Result[DigestRun, String] {
+    if name == "plasma" { return Ok(plasma_run(cells, info)); }
+    if name == "ripple" { return Ok(ripple_run(cells, info)); }
+    if name == "aurora" { return Ok(aurora_run(cells, info)); }
+    if name == "chaos" { return Ok(chaos_run(cells, info)); }
+    if name == "metaballs" { return Ok(metaballs_run(cells, info)); }
+    if name == "moire" { return Ok(moire_run(cells, info)); }
+    if name == "radar" { return Ok(radar_run(cells, info)); }
+    if name == "cosmos" { return Ok(cosmos_run(cells, info)); }
+    if name == "tunnel" { return Ok(tunnel_run(cells, info)); }
+    if name == "mystify" { return Ok(mystify_run(cells, info)); }
+    if name == "expand" { return Ok(expand_run(cells, info, lines)); }
+    if name == "wipe" { return Ok(wipe_run(cells, info, lines)); }
+    if name == "sweep" { return Ok(sweep_run(cells, info, lines)); }
+    if name == "slide" { return Ok(slide_run(cells, info, lines)); }
+    if name == "middleout" { return Ok(middleout_run(cells, info, lines)); }
+    if name == "binarypath" { return Ok(binarypath_run(cells, info, lines)); }
+    if name == "burn" { return Ok(burn_run(cells, info, lines)); }
+    if name == "blackhole" { return Ok(blackhole_run(cells, info, lines)); }
+    return Err("ERR\tscene\tno parity port: " + name);
+}

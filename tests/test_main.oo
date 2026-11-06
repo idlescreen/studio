@@ -1,0 +1,65 @@
+// # IdleScreen Studio & Render Verification Suite
+//
+// Logline: Functional I/O and negative-trust refusal tests for `idle-studio` and `render` duration parsing, job serialization, 53-scene roster, and queue ID collision prevention.
+// Setup: Pure deterministic assertions over `studio/job_spec.oo`, `studio/queue.oo`, and `ascii/effects.oo`.
+// Beats:
+//   1. Test duration parsing (`10s`, `5m`, `2h`, `1d`) and reject negative or malformed duration inputs (`0s`, `-5s`, `abc`).
+//   2. Test `RenderSpec` JSON round-trip serialization (`spec_to_json` / `spec_from_json`).
+//   3. Test `StudioQueueEntry` JSON persistence and collision-free `next_job_id` generation across the 53 built-in scenes.
+
+import "ascii/effects.oo";
+import "studio/job_spec.oo";
+import "studio/queue.oo";
+
+fn test_durations_and_roster() -> Bool {
+    if effects_count() != 53 { return false; }
+    if effects_index("beams") < 0 || effects_index("aurora") < 0 { return false; }
+    if effects_index("thunderstorm") < 0 || effects_index("zero") < 0 { return false; }
+    // Negative-trust refusal on non-existent scenes
+    if effects_index("storm") >= 0 || effects_index("nonexistent") >= 0 { return false; }
+    if parse_duration_secs("10s") != 10 { return false; }
+    if parse_duration_secs("5m") != 300 { return false; }
+    if parse_duration_secs("2h") != 7200 { return false; }
+    if parse_duration_secs("1d") != 86400 { return false; }
+    if parse_duration_secs("45") != 45 { return false; }
+    // Negative-trust refusal on invalid durations
+    if parse_duration_secs("0s") >= 0 { return false; }
+    if parse_duration_secs("-5s") >= 0 { return false; }
+    if parse_duration_secs("abc") >= 0 { return false; }
+    return true;
+}
+
+fn test_spec_and_queue() -> Bool {
+    let mut sp: RenderSpec = default_render_spec();
+    sp.effect = "plasma";
+    sp.text = "OPENOODA";
+    sp.duration = "30s";
+    sp.dur_secs = 30;
+    sp.width = 1920;
+    sp.height = 1080;
+    sp.fps = 60;
+    sp.dry_run = true;
+    let js: String = spec_to_json(sp);
+    let parsed: RenderSpec = spec_from_json(js);
+    if parsed.effect != "plasma" || parsed.text != "OPENOODA" { return false; }
+    if parsed.width != 1920 || parsed.height != 1080 || parsed.fps != 60 { return false; }
+    if !parsed.dry_run || parsed.dur_secs != 30 { return false; }
+    let mut q: List[StudioQueueEntry] = list_new();
+    q = list_push(q, StudioQueueEntry { id: "job-2", status: "pending", spec: parsed });
+    if next_job_id(q) != "job-3" { return false; }
+    let qtxt: String = queue_to_text(q);
+    let q2: List[StudioQueueEntry] = queue_from_text(qtxt);
+    if list_len(q2) != 1 { return false; }
+    let e0: StudioQueueEntry = list_get(q2, 0);
+    if e0.id != "job-2" || e0.spec.effect != "plasma" { return false; }
+    return true;
+}
+
+pub fn main(alloc: &AllocCap, args: List[String]) -> Result[Int, String] {
+    let _q: Int = alloc_bytes(alloc, 33554432);
+    let _a: List[String] = args;
+    if !test_durations_and_roster() { return Err("FAIL: test_durations_and_roster"); }
+    if !test_spec_and_queue() { return Err("FAIL: test_spec_and_queue"); }
+    println("PASS: all assertions (idle-studio)");
+    return Ok(0);
+}

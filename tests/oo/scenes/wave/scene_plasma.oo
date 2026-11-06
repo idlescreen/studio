@@ -1,0 +1,122 @@
+// # scene_plasma — Amiga copper-bar plasma port
+//
+// Logline: Bit-exact port of Plasma::next_frame for the parity harness.
+//
+// Setup: Built over canvas_cells geometry + math_paint shared helpers. frame counts 1..=64; frame 64 settles text cells to bevel colors.
+//
+// Beats:
+//   1. plasma_new builds the 51-step palette and 3-stop final spectrum.
+//   2. plasma_next computes per-cell intensity; frame 64 settles to bevel.
+//   3. plasma_run drives the loop and returns the digest stream.
+
+import "tests/oo/canvas_cells.oo";
+import "tests/oo/grid_cells.oo";
+import "tests/oo/gradient_spectrum.oo";
+import "tests/oo/math_paint.oo";
+import "tests/shade_float.oo";
+import "tests/digest_run.oo";
+
+pub type Plasma = struct {
+    cells: List[CellGeom],
+    palette: List[Int],
+    final_spec: List[Int],
+    frame: Int,
+    frame_f: Float,
+    info: CanvasInfo
+};
+
+fn plasma_stops6() -> List[Int] {
+    let mut s: List[Int] = list_new();
+    s = list_push(s, 36 * 65536 + 0 * 256 + 70);
+    s = list_push(s, 123 * 65536 + 44 * 256 + 191);
+    s = list_push(s, 255 * 65536 + 0 * 256 + 127);
+    s = list_push(s, 255 * 65536 + 136 * 256 + 0);
+    s = list_push(s, 255 * 65536 + 234 * 256 + 0);
+    s = list_push(s, 0 * 65536 + 245 * 256 + 212);
+    return s;
+}
+
+fn plasma_stops3() -> List[Int] {
+    let mut s: List[Int] = list_new();
+    s = list_push(s, 255 * 65536 + 0 * 256 + 127);
+    s = list_push(s, 255 * 65536 + 234 * 256 + 0);
+    s = list_push(s, 0 * 65536 + 245 * 256 + 212);
+    return s;
+}
+
+pub fn plasma_new(cells: List[CellGeom], info: CanvasInfo) -> Plasma {
+    let _r1 = Plasma {
+        cells: cells,
+        palette: spectrum_build(plasma_stops6(), 10),
+        final_spec: spectrum_build(plasma_stops3(), 12),
+        frame: 0,
+        frame_f: 0.0,
+        info: info
+    };
+    return _r1;
+}
+
+fn plasma_cell(p: Plasma, c: CellGeom, t: Float, fill_fade: Float, reveal_x: Float) -> PaintCell {
+    let mut locked: Int = 0;
+    if c.fill == 0 && c.nx <= reveal_x { locked = 1; }
+    let v1: Float = sin(c.dx * 4.5 + t);
+    let v2: Float = sin(c.dy * 5.2 - t * 1.2);
+    let v3: Float = sin((c.dx + c.dy) * 4.0 + t * 0.8);
+    let v4: Float = sin(c.dist * 7.5 - t * 1.6);
+    let copper: Float = sin(c.ny * 14.0 + t * 2.2) * 0.2;
+    let raw: Float = (v1 + v2 + v3 + v4) * 0.125 + 0.5 + copper;
+    let intensity: Float = clamp_f(raw, 0.15, 1.0);
+    let _r2 = math_paint_cell(c, p.info, p.palette, p.final_spec, intensity, locked, fill_fade);
+    return _r2;
+}
+
+pub fn plasma_next(p: Plasma) -> List[PaintCell] {
+    let mut out: List[PaintCell] = list_new();
+    if p.frame >= 64 { return out; }
+    let frame: Int = p.frame + 1;
+    let n: Int = list_len(p.cells);
+    if frame == 64 {
+        let mut i: Int = 0;
+        while i < n {
+            out = list_push(out, settle_paint_cell(list_get(p.cells, i), p.info));
+            i = i + 1;
+        }
+        return out;
+    }
+    let frame_f: Float = p.frame_f + 1.0;
+    let progress: Float = frame_f / 64.0;
+    let t: Float = frame_f * 0.11;
+    let mut fill_fade: Float = 1.0;
+    if progress > 0.72 { fill_fade = clamp_f((1.0 - progress) / 0.28, 0.0, 1.0); }
+    let reveal_x: Float = clamp_f(progress * 1.35 - 0.15, 0.0, 1.0);
+    let mut j: Int = 0;
+    while j < n {
+        out = list_push(out, plasma_cell(p, list_get(p.cells, j), t, fill_fade, reveal_x));
+        j = j + 1;
+    }
+    return out;
+}
+
+pub fn plasma_advance(p: Plasma) -> Plasma {
+    let _r3 = Plasma {
+        cells: p.cells,
+        palette: p.palette,
+        final_spec: p.final_spec,
+        frame: p.frame + 1,
+        frame_f: p.frame_f + 1.0,
+        info: p.info
+    };
+    return _r3;
+}
+
+pub fn plasma_run(cells: List[CellGeom], info: CanvasInfo) -> DigestRun {
+    let mut p: Plasma = plasma_new(cells, info);
+    let mut run: DigestRun = digest_run_new();
+    while true {
+        let pcs: List[PaintCell] = plasma_next(p);
+        if list_len(pcs) == 0 { break; }
+        run = run_push(run, digest_paint_cells(pcs), pcs);
+        p = plasma_advance(p);
+    }
+    return run;
+}

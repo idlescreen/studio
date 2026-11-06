@@ -1,0 +1,94 @@
+// # IdleScreen Studio & Render Multi-Call Entrypoint
+//
+// Logline: Multi-call entrypoint resolving `idle-studio` (Director TUI & queue CLI) and `render` (headless 53-scene video exporter) from argv[0] or `--persona`.
+// Setup: Declared capabilities: FsRead, FsWrite, Process, Env, Ffi, Alloc.
+// Beats:
+//   1. Raise the ambient List quota by 2 GiB for 1080p/4K cell-grid and pixel rasterization.
+//   2. Resolve `render` vs `idle-studio` from `sys_argv0(proc)` or `--persona`.
+//   3. Dispatch to `cmd_render`, `cmd_studio_cli`, or `run_studio_tui` and fail closed on invalid arguments.
+
+import "std/fs/process/process.oo";
+import "ascii/effects.oo";
+import "studio/job_spec.oo";
+import "studio/render.oo";
+import "studio/queue.oo";
+import "studio/tui.oo";
+
+pub fn resolve_studio_persona(prog: String) -> String {
+    let mut base: String = prog;
+    while str_index_of(base, "/") >= 0 {
+        base = str_slice(base, str_index_of(base, "/") + 1, chars_len(base));
+    }
+    if base == "render" || base == "idle-render" { return "render"; }
+    return "idle-studio";
+}
+
+fn strip_args(args: List[String], start: Int) -> List[String] {
+    let mut out: List[String] = list_new();
+    let mut i: Int = start;
+    while i < list_len(args) {
+        out = list_push(out, list_get(args, i));
+        i = i + 1;
+    }
+    return out;
+}
+
+fn print_studio_help() -> Int {
+    println("IdleScreen Studio 5.0.1 — TUI Director for the render capability (openOODA .oo)");
+    println("Usage: idle-studio [OPTIONS] [COMMAND]");
+    println("Commands:");
+    println("  tui       Interactive Director TUI (default when no subcommand given)");
+    println("  enqueue   Add a job to the queue (-e <scene> --duration <dur> -o <out>)");
+    println("  list      List queue entries");
+    println("  run       Run next pending job (or all with --all)");
+    println("  render    Invoke headless scene exporter directly");
+    return 0;
+}
+
+fn studio_self_test() -> Int {
+    if effects_count() != 53 { return 1; }
+    if parse_duration_secs("10s") != 10 { return 1; }
+    if parse_duration_secs("2m") != 120 { return 1; }
+    println("PASS: idle-studio 5.0.1 self-test complete (53 scenes)");
+    return 0;
+}
+
+pub fn main(
+    fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap,
+    env: &EnvCap, ffi: &FfiCap, alloc: &AllocCap, args: List[String]
+) -> Result[Int, String] {
+    let mut qi: Int = 0;
+    while qi < 2 {
+        let _q: Int = alloc_bytes(alloc, 1073741824);
+        qi = qi + 1;
+    }
+    let mut persona: String = resolve_studio_persona(sys_argv0(proc));
+    let mut rest: List[String] = args;
+    if list_len(rest) > 0 && list_get(rest, 0) == "--persona" {
+        if list_len(rest) < 2 { return Err("ERR --persona requires a persona name"); }
+        persona = list_get(rest, 1);
+        rest = strip_args(rest, 2);
+    }
+    if persona == "render" {
+        return Ok(cmd_render(fs_r, proc, rest));
+    }
+    let mut qpath: String = default_queue_path(env);
+    if list_len(rest) >= 2 && list_get(rest, 0) == "--queue" {
+        qpath = list_get(rest, 1);
+        rest = strip_args(rest, 2);
+    }
+    if list_len(rest) == 0 {
+        return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, qpath));
+    }
+    let verb: String = list_get(rest, 0);
+    let tail: List[String] = strip_args(rest, 1);
+    if verb == "tui" { return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, qpath)); }
+    if verb == "render" { return Ok(cmd_render(fs_r, proc, tail)); }
+    if verb == "--help" || verb == "-h" || verb == "help" { return Ok(print_studio_help()); }
+    if verb == "--version" || verb == "-V" || verb == "version" {
+        println("idle-studio 5.0.1 (openOODA native)");
+        return Ok(0);
+    }
+    if verb == "--self-test" { return Ok(studio_self_test()); }
+    return Ok(cmd_studio_cli(fs_r, fs_w, proc, qpath, verb, tail));
+}

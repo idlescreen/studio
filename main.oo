@@ -55,10 +55,10 @@ fn studio_self_test() -> Int {
 
 pub fn main(
     fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap,
-    env: &EnvCap, ffi: &FfiCap, alloc: &AllocCap, args: List[String]
+    env: &EnvCap, ffi: &FfiCap, alloc: &AllocCap, ar: &ArenaCap, args: List[String]
 ) -> Result[Int, String] {
     let mut qi: Int = 0;
-    while qi < 2 {
+    while qi < 8 {
         let _q: Int = alloc_bytes(alloc, 1073741824);
         qi = qi + 1;
     }
@@ -78,11 +78,11 @@ pub fn main(
         rest = strip_args(rest, 2);
     }
     if list_len(rest) == 0 {
-        return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, qpath));
+        return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, ar, qpath));
     }
     let verb: String = list_get(rest, 0);
     let tail: List[String] = strip_args(rest, 1);
-    if verb == "tui" { return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, qpath)); }
+    if verb == "tui" { return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, ar, qpath)); }
     if verb == "render" { return Ok(cmd_render(fs_r, proc, tail)); }
     if verb == "--help" || verb == "-h" || verb == "help" { return Ok(print_studio_help()); }
     if verb == "--version" || verb == "-V" || verb == "version" {

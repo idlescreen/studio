@@ -12,6 +12,7 @@ import "std/fs/process/process.oo";
 import "ascii/effects.oo";
 import "ascii/engine.oo";
 import "ascii/draw/ansi.oo";
+import "core/shell.oo";
 import "studio/job_spec.oo";
 import "studio/render.oo";
 import "studio/queue.oo";
@@ -103,7 +104,7 @@ fn render_tui_screen(st: StudioTuiState, entries: List[StudioQueueEntry], tick: 
     return out;
 }
 
-pub fn run_studio_tui(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, ffi: &FfiCap, qpath: String) -> Int {
+pub fn run_studio_tui(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, ffi: &FfiCap, ar: &ArenaCap, qpath: String) -> Int {
     if oo_tui_enable_raw(ffi, "").is_err() {
         println("idle-studio: terminal raw mode unavailable (use CLI subcommands: enqueue, list, run)");
         return 1;
@@ -115,11 +116,14 @@ pub fn run_studio_tui(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, ff
         dur_idx: 1, res_idx: 0, fps_idx: 0, crf: 35, dry_run: false,
         status_msg: "Ready — press n/s to enqueue or r to export", qpath: qpath
     };
+    let aid: Int = frame_arena_open(ar);
     let mut tick: Int = 0;
     while st.running {
         let raw: String = match read_file(fs_r, st.qpath) { Ok(v) => v, Err(_) => "" };
         let entries: List[StudioQueueEntry] = queue_from_text(raw);
+        let _e: Int = frame_arena_enter(ar, aid);
         let _w: Result[String, String] = oo_tui_write(ffi, render_tui_screen(st, entries, tick));
+        let _l: Int = frame_arena_leave(ar, aid);
         let k: String = match oo_tui_read_byte_timeout(ffi, "", 50) { Ok(v) => v, Err(_) => "" };
         if k != "" {
             let b: Int = byte_at(k, 0);
@@ -149,6 +153,7 @@ pub fn run_studio_tui(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, ff
         }
         tick = tick + 1;
     }
+    let _c: Int = frame_arena_close(ar, aid);
     let _ = oo_tui_show_cursor(ffi, 1);
     let _ = oo_tui_alt_screen_leave(ffi);
     let _ = oo_tui_disable_raw(ffi, "");

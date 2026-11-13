@@ -7,16 +7,16 @@
 //   2. Handle keyboard navigation (`j/k`/arrows for field focus, `h/l`/left/right for scene/parameter cycling, `n`/`s` to enqueue, `r`/Enter to run, `q`/Esc to quit).
 //   3. Persist and execute queued export jobs in place and restore terminal cursor/screen state on exit.
 
-import "std/core/primitives/str.oo";
-import "std/fs/process/process.oo";
 import "ascii/effects.oo";
 import "ascii/engine.oo";
 import "ascii/draw/ansi.oo";
 import "core/shell.oo";
 import "studio/job_spec.oo";
-import "studio/render.oo";
 import "studio/queue.oo";
 
+// Link anchor: references the hot_reload builtin so the toolchain links
+// liboodar-net.a (home of the oo_tui_* runtime used below). Never called;
+// never delete — oodar_resolve_exts keys the net archive off @oo_hot_reload.
 fn tui_link_probe() -> Int {
     return hot_reload("idlescreen-tui-tier");
 }
@@ -73,7 +73,7 @@ fn build_spec(st: StudioTuiState) -> RenderSpec {
         width: res_w(st.res_idx),
         height: res_h(st.res_idx),
         crf: st.crf,
-        format: "mp4",
+        format: "mkv",
         container: "mkv",
         output: "/tmp/idlescreen-" + eff + ".mkv",
         dry_run: st.dry_run
@@ -142,13 +142,16 @@ pub fn run_studio_tui(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, ff
                 let sp: RenderSpec = build_spec(st);
                 let id: String = next_job_id(entries);
                 let next_e: List[StudioQueueEntry] = list_push(entries, StudioQueueEntry { id: id, status: "pending", spec: sp });
-                let _sv: Bool = save_queue(proc, fs_w, st.qpath, next_e);
-                st.status_msg = "Enqueued " + id + " (" + sp.effect + " -> " + sp.output + ")";
+                if !save_queue(proc, fs_w, st.qpath, next_e) {
+                    st.status_msg = "Error: failed to save queue to " + st.qpath;
+                } else {
+                    st.status_msg = "Enqueued " + id + " (" + sp.effect + " -> " + sp.output + ")";
+                }
             } else if b == 114 || b == 13 {
                 let mut rargs: List[String] = list_new();
                 rargs = list_push(rargs, "--all");
-                let _rc: Int = cmd_studio_cli(fs_r, fs_w, proc, st.qpath, "run", rargs);
-                st.status_msg = "Completed queue export run";
+                let rc: Int = cmd_studio_cli(fs_r, fs_w, proc, st.qpath, "run", rargs);
+                st.status_msg = if rc == 0 { "Completed queue export run" } else { "Export failed (exit code " + rc.to_string() + ")" };
             }
         }
         tick = tick + 1;

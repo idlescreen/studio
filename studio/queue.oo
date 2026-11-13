@@ -7,7 +7,7 @@
 //   2. Parse and serialize line-delimited JSON queue entries (`id`, `status`, `spec`) and allocate collision-free `job-N` IDs.
 //   3. Implement `idle-studio enqueue`, `idle-studio list`, and `idle-studio run [--all]`.
 
-import "std/core/primitives/str.oo";
+import "oostd/core/primitives/str.oo";
 import "core/shell.oo";
 import "studio/job_spec.oo";
 import "studio/render.oo";
@@ -90,6 +90,22 @@ pub fn save_queue(proc: &ProcessCap, fs_w: &FsWriteCap, path: String, entries: L
     return !res.is_err();
 }
 
+fn build_run_args(sp: RenderSpec) -> List[String] {
+    let mut rargs: List[String] = list_new();
+    rargs = list_push(rargs, "-e"); rargs = list_push(rargs, sp.effect);
+    rargs = list_push(rargs, "--text"); rargs = list_push(rargs, sp.text);
+    rargs = list_push(rargs, "--duration"); rargs = list_push(rargs, sp.duration);
+    rargs = list_push(rargs, "--fps"); rargs = list_push(rargs, sp.fps.to_string());
+    rargs = list_push(rargs, "--format"); rargs = list_push(rargs, sp.format);
+    rargs = list_push(rargs, "--container"); rargs = list_push(rargs, sp.container);
+    rargs = list_push(rargs, "--crf"); rargs = list_push(rargs, sp.crf.to_string());
+    rargs = list_push(rargs, "--width"); rargs = list_push(rargs, sp.width.to_string());
+    rargs = list_push(rargs, "--height"); rargs = list_push(rargs, sp.height.to_string());
+    rargs = list_push(rargs, "-o"); rargs = list_push(rargs, sp.output);
+    if sp.dry_run { rargs = list_push(rargs, "--dry-run"); }
+    return rargs;
+}
+
 pub fn cmd_studio_cli(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, path: String, verb: String, args: List[String]) -> Int {
     let raw: String = match read_file(fs_r, path) { Ok(v) => v, Err(_) => "" };
     let mut entries: List[StudioQueueEntry] = queue_from_text(raw);
@@ -111,7 +127,10 @@ pub fn cmd_studio_cli(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, pa
         let sp: RenderSpec = match sp_res { Ok(v) => v, Err(_) => default_render_spec() };
         let id: String = next_job_id(entries);
         entries = list_push(entries, StudioQueueEntry { id: id, status: "pending", spec: sp });
-        let _s: Bool = save_queue(proc, fs_w, path, entries);
+        if !save_queue(proc, fs_w, path, entries) {
+            println("Error: failed to save queue to " + path);
+            return 1;
+        }
         println("enqueued " + id + " -> " + path);
         return 0;
     }
@@ -120,27 +139,28 @@ pub fn cmd_studio_cli(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, pa
         let mut k: Int = 0;
         while k < list_len(args) { if list_get(args, k) == "--all" { run_all = true; } k = k + 1; }
         let mut ran: Int = 0;
+        let mut failed: Int = 0;
         let mut j: Int = 0;
         while j < list_len(entries) {
             let mut e: StudioQueueEntry = list_get(entries, j);
             if e.status == "pending" {
-                let mut rargs: List[String] = list_new();
-                rargs = list_push(rargs, "-e"); rargs = list_push(rargs, e.spec.effect);
-                rargs = list_push(rargs, "--text"); rargs = list_push(rargs, e.spec.text);
-                rargs = list_push(rargs, "--duration"); rargs = list_push(rargs, e.spec.duration);
-                rargs = list_push(rargs, "-o"); rargs = list_push(rargs, e.spec.output);
-                if e.spec.dry_run { rargs = list_push(rargs, "--dry-run"); }
-                let rc: Int = cmd_render(fs_r, proc, rargs);
+                let rargs: List[String] = build_run_args(e.spec);
+                let rc: Int = cmd_render(fs_r, fs_w, proc, rargs);
                 e.status = if rc == 0 { "done" } else { "failed" };
                 entries = list_set(entries, j, e);
-                let _s: Bool = save_queue(proc, fs_w, path, entries);
+                if !save_queue(proc, fs_w, path, entries) {
+                    println("Error: failed to save queue to " + path + " (job " + e.id + " status lost — it stays pending and will be re-run)");
+                    return 1;
+                }
                 println(e.status + " " + e.id);
                 ran = ran + 1;
+                if rc != 0 { failed = failed + 1; }
                 if !run_all { return rc; }
             }
             j = j + 1;
         }
         if ran == 0 { println("no pending jobs"); }
+        if failed > 0 { return 1; }
         return 0;
     }
     println("idle-studio: unknown command: " + verb);

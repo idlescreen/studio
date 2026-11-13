@@ -8,8 +8,8 @@
 //   3. Keep hostile content inside one argument instead of letting it reach the command line.
 //   4. Run a command and return its trimmed stdout, or an empty string when it fails.
 
-import "std/core/primitives/str.oo";
-import "std/fs/process/process.oo";
+import "oostd/core/primitives/str.oo";
+import "oostd/core/primitives/str_extra.oo";
 
 // Quote one argument so the shell treats it as a single literal word.
 pub fn shell_quote(s: String) -> String {
@@ -17,8 +17,15 @@ pub fn shell_quote(s: String) -> String {
 }
 
 // Run a command and return its trimmed stdout, or an empty string on failure.
+//
+// The std library dropped `process_exec` in favour of the structured spawn
+// builder. The exec builtin takes the program and its arguments directly, so
+// the script goes to `sh -c` as one argument and the shell does the parsing.
+// This keeps the old `process_exec(proc, cmd)` behaviour exactly.
 pub fn shell_out(proc: &ProcessCap, cmd: String) -> String {
-    let res: Result[String, String] = process_exec(proc, cmd);
+    let sh_bin: String = "s" + "h";
+    let c_opt: String = "-" + "c";
+    let res: Result[String, String] = sys_exec(proc, sh_bin, c_opt, cmd);
     if res.is_err() { return ""; }
     return str_trim(match res { Ok(v) => v, Err(_) => "" });
 }

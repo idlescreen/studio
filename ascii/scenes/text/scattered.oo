@@ -1,6 +1,6 @@
 // # Scene Scattered - Glyph Scatter and Regather
 //
-// Logline: Letters of a phrase scattered across the grid that periodically regather into the word IDLE.
+// Logline: Letters of a phrase scattered across the grid that periodically regather into the word OPENOODA.
 // Setup: Pure arithmetic over CellGrid. Zero ambient authority.
 // Beats:
 //   1. Place each phrase letter on a hash-scattered orbit.

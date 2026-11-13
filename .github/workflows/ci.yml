@@ -8,25 +8,89 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  ooda-checks:
-    name: Native openOODA (.oo) Verification
+  oo-gates:
+    name: Build from source and run the openOODA gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805da76410c181273ba90b1
+
+      - name: Fetch openOODA toolchain (oodac, oodar, std)
+        env:
+          # The toolchain repos are private in the openOODA-core org, so the
+          # default GITHUB_TOKEN cannot read them. A PAT with repo scope
+          # across that org is required to clone them here.
+          TOOLCHAIN_TOKEN: ${{ secrets.IDLESCREEN_PACKAGES_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOOLCHAIN_TOKEN" ]; then
+            echo "::error::IDLESCREEN_PACKAGES_DISPATCH_TOKEN is not set — cannot clone the private openOODA-core toolchain"
+            exit 1
+          fi
+          mkdir -p /tmp/ooda-toolchain
+          for r in oodac oodar; do
+            git clone --depth 1 \
+              "https://x-access-token:${TOOLCHAIN_TOKEN}@github.com/openOODA-core/${r}.git" \
+              "/tmp/ooda-toolchain/${r}"
+            git -C "/tmp/ooda-toolchain/${r}" remote set-url origin "https://github.com/openOODA-core/${r}.git"
+          done
+          # The std repo is cloned under the name `oostd`: the compiler
+          # resolves oostd/... imports by walking up from the build
+          # directory, so the tree has to be a directory named `oostd` in an
+          # ancestor of the project.
+          git clone --depth 1 \
+            "https://x-access-token:${TOOLCHAIN_TOKEN}@github.com/openOODA-core/std.git" \
+            "/tmp/ooda-toolchain/oostd"
+          git -C "/tmp/ooda-toolchain/oostd" remote set-url origin "https://github.com/openOODA-core/std.git"
+
+      - name: Stage the build tree under /tmp
+        run: |
+          # oodar's child scope is hardcoded to /Projects:/home/ubermetroid:/tmp,
+          # so the build tree has to live under /tmp for the compiler's child
+          # processes to read it. /tmp is also where `oostd` must sit: the
+          # compiler walks up from the build directory to find it.
+          mkdir -p /tmp/ooda-toolchain/studio
+          rsync -a --exclude .git "$GITHUB_WORKSPACE/" /tmp/ooda-toolchain/studio/
+          echo "OODA_HOME=/tmp/ooda-toolchain" >> "$GITHUB_ENV"
+          echo "WORKDIR=/tmp/ooda-toolchain/studio" >> "$GITHUB_ENV"
+
+      - name: Verify (page rule, file law, academy, density, vocab, shape, oodac check)
+        working-directory: ${{ env.WORKDIR }}
+        run: make verify
+
+      - name: Test suite
+        working-directory: ${{ env.WORKDIR }}
+        run: make test
+
+      - name: Deterministic build
+        working-directory: ${{ env.WORKDIR }}
+        run: make det
+
+  prebuilt:
+    name: Verify the committed native openOODA (.oo) binaries
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805da76410c181273ba90b1
 
       - name: Verify native openOODA (.oo) studio & render binaries
         run: |
           chmod +x bin/idle-studio bin/render
           ./bin/idle-studio --self-test
-          ./bin/render -e beams --duration 1s --dry-run -o /tmp/test-beams.mkv
+          ./bin/render --persona render -e beams --duration 1s --dry-run -o /tmp/test-beams.mkv
+          # The render persona is selected from the invocation name. It resolves
+          # from /proc/self/cmdline, which the jail read scope now covers, so
+          # the alias must work here and is asserted, not skipped.
+          ./bin/render -e beams --duration 1s --dry-run -o /tmp/test-beams-alias.mkv
+          ./bin/render --persona render -e plasma --duration 1s --fps 1 --format raw -o /tmp/test-real.argb
+          test "$(wc -c < /tmp/test-real.argb)" -eq 983040
+          echo "PASS: render real encode (byte-exact raw)"
           ./bin/idle-studio --queue /tmp/test-queue.json enqueue -e aurora --duration 2s --dry-run -o /tmp/test-aurora.mkv
           ./bin/idle-studio --queue /tmp/test-queue.json list
           ./bin/idle-studio --queue /tmp/test-queue.json run --all

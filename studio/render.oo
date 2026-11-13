@@ -7,8 +7,7 @@
 //   2. Validate that the effect is in the 53-scene roster and that duration, dimensions, and FPS are strictly positive.
 //   3. Emit the dry-run summary line or render frames from `engine_frame` + `blit_cells` and encode the output container.
 
-import "std/core/primitives/str.oo";
-import "std/fs/process/process.oo";
+import "oostd/core/primitives/str.oo";
 import "core/cell.oo";
 import "core/grid.oo";
 import "core/shell.oo";
@@ -88,35 +87,100 @@ pub fn parse_render_args(fs_r: &FsReadCap, args: List[String]) -> Result[RenderS
     return Ok(s);
 }
 
-fn encode_output(proc: &ProcessCap, s: RenderSpec, frames: Int) -> Int {
+fn pad6(t: Int) -> String {
+    let mut out: String = t.to_string();
+    while chars_len(out) < 6 { out = "0" + out; }
+    return out;
+}
+
+fn argb_bytes_be(px: List[Int]) -> String {
+    let mut b: List[Int] = bytes_new();
+    let mut i: Int = 0;
+    let n: Int = list_len(px);
+    while i < n {
+        let v: Int = list_get(px, i);
+        b = bytes_push(b, (v >> 24) & 255);
+        b = bytes_push(b, (v >> 16) & 255);
+        b = bytes_push(b, (v >> 8) & 255);
+        b = bytes_push(b, v & 255);
+        i = i + 1;
+    }
+    return bytes_to_str(b);
+}
+
+// The video encoder for a container. ffmpeg picks its own default when no
+// -c:v is given, so the codec must be named explicitly: otherwise the tool
+// would claim one codec in its output line and write another.
+fn codec_for(container: String) -> String {
+    if container == "mp4" { return "libx264"; }
+    return "libaom-av1";
+}
+
+// The muxer for a container, so the persisted container field decides the
+// output format instead of the output file's extension.
+fn muxer_for(container: String) -> String {
+    if container == "mp4" { return "mp4"; }
+    return "matroska";
+}
+
+fn encode_output(proc: &ProcessCap, fs_w: &FsWriteCap, s: RenderSpec, frames: Int) -> Int {
     let idx: Int = effects_index(s.effect);
     let cols: Int = if s.width / 8 >= 40 { 80 } else { 40 };
     let rows: Int = if s.height / 16 >= 20 { 24 } else { 15 };
     let wm: String = if s.text != "" { to_uppercase(s.text) } else { "IDLESCREEN" };
-    let g0: CellGrid = grid_new(cols, rows, rgb(4, 6, 12));
-    let gf: CellGrid = engine_frame(g0, idx, frames / 2, wm);
-    let px: List[Int] = blit_cells(gf, "argb8888", "bold");
-    let c0: Int = if list_len(px) > 0 { list_get(px, 0) } else { 0 };
-    let r_hex: Int = (c0 >> 16) & 255;
-    let g_hex: Int = (c0 >> 8) & 255;
-    let b_hex: Int = c0 & 255;
+    let pw: Int = cols * 8;
+    let ph: Int = rows * 16;
+    let frag_dir: String = s.output + ".frames.d";
+    let _rm0: String = shell_out(proc, "rm -rf " + shell_quote(frag_dir));
+    let _mk: String = shell_out(proc, "mkdir -p " + shell_quote(frag_dir));
+    let mut t: Int = 0;
+    while t < frames {
+        let gf: CellGrid = engine_frame(grid_new(cols, rows, rgb(4, 6, 12)), idx, t, wm);
+        let px: List[Int] = blit_cells(gf, "argb8888", "bold");
+        let chunk: String = frag_dir + "/f" + pad6(t) + ".argb";
+        let wres: Result[Bool, String] = write_file(fs_w, chunk, argb_bytes_be(px));
+        if wres.is_err() {
+            println("render: failed to write frame data (" + chunk + ")");
+            return 1;
+        }
+        t = t + 1;
+    }
     let qout: String = shell_quote(s.output);
     let dir_cmd: String = "mkdir -p \"$(dirname " + qout + ")\"";
     let _d: String = shell_out(proc, dir_cmd);
     if s.format == "raw" {
-        let raw_cmd: String = "printf 'GBRI_RAW_%s_%dx%d_%dfps_%dframes\\n' " + shell_quote(s.effect) + " " + s.width.to_string() + " " + s.height.to_string() + " " + s.fps.to_string() + " " + frames.to_string() + " > " + qout + " && echo ok";
-        return if shell_out(proc, raw_cmd) == "ok" { 0 } else { 1 };
+        if shell_out(proc, "cat " + shell_quote(frag_dir) + "/f*.argb > " + qout + " && echo ok") != "ok" {
+            println("render: failed to assemble raw frames at " + s.output);
+            return 1;
+        }
+        let _rm: String = shell_out(proc, "rm -rf " + shell_quote(frag_dir));
+        return 0;
     }
-    let has_ff: Bool = shell_out(proc, "command -v ffmpeg >/dev/null 2>&1 && echo yes") == "yes";
-    if has_ff {
-        let ff_cmd: String = "ffmpeg -y -f lavfi -i color=c=0x04060c:s=" + s.width.to_string() + "x" + s.height.to_string() + ":r=" + s.fps.to_string() + ":d=" + s.dur_secs.to_string() + " -pix_fmt yuv420p -crf " + s.crf.to_string() + " " + qout + " >/dev/null 2>&1 && echo ok";
-        if shell_out(proc, ff_cmd) == "ok" { return 0; }
+    if shell_out(proc, "command -v ffmpeg >/dev/null 2>&1 && echo yes") != "yes" {
+        println("render: ffmpeg not found — frame data kept at " + frag_dir);
+        return 1;
     }
-    let fallback_cmd: String = "printf 'P6\\n%d %d\\n255\\n' " + cols.to_string() + " " + rows.to_string() + " > " + qout + " && printf 'FRAME_RGB=%d,%d,%d\\n' " + r_hex.to_string() + " " + g_hex.to_string() + " " + b_hex.to_string() + " >> " + qout + " && echo ok";
-    return if shell_out(proc, fallback_cmd) == "ok" { 0 } else { 1 };
+    let pipe_cmd: String = "cat " + shell_quote(frag_dir) + "/f*.argb | ffmpeg -y -v error -f rawvideo -pix_fmt argb -s " + pw.to_string() + "x" + ph.to_string() + " -r " + s.fps.to_string() + " -i - -vf scale=" + s.width.to_string() + ":" + s.height.to_string() + " -c:v " + codec_for(s.container) + " -f " + muxer_for(s.container) + " -pix_fmt yuv420p -crf " + s.crf.to_string() + " " + qout + " >/dev/null 2>&1 && echo ok";
+    if shell_out(proc, pipe_cmd) != "ok" {
+        println("render: ffmpeg failed to encode " + s.output + " (frame data kept at " + frag_dir + ")");
+        // The sandbox scrubs a child's read scope down to a fixed root list,
+        // so a nested exec can be denied while the direct child succeeds.
+        // Probe a nested exec to tell an environmental denial apart from a
+        // bad ffmpeg command, and point the operator at the path that works.
+        let probe: String = shell_out(proc, "sh -c \"echo oo-nested-exec-probe\"");
+        if !str_contains(probe, "oo-nested-exec-probe") {
+            println("render: a nested process cannot be exec'd here — the sandbox denies the exec scope, so ffmpeg cannot run inside it");
+            println("render: use --format raw for the sandbox-safe path; the raw frames are kept at " + frag_dir);
+        } else {
+            println("render: ffmpeg ran but did not produce " + s.output + "; check the ffmpeg build and the codec (av1/h264) support");
+        }
+        return 1;
+    }
+    let _rm2: String = shell_out(proc, "rm -rf " + shell_quote(frag_dir));
+    return 0;
 }
 
-pub fn cmd_render(fs_r: &FsReadCap, proc: &ProcessCap, args: List[String]) -> Int {
+pub fn cmd_render(fs_r: &FsReadCap, fs_w: &FsWriteCap, proc: &ProcessCap, args: List[String]) -> Int {
     let mut i: Int = 0;
     while i < list_len(args) {
         let a: String = list_get(args, i);
@@ -134,17 +198,26 @@ pub fn cmd_render(fs_r: &FsReadCap, proc: &ProcessCap, args: List[String]) -> In
         return 2;
     }
     let s: RenderSpec = match res { Ok(v) => v, Err(_) => default_render_spec() };
+    if s.format == "png" {
+        println("render: the png sequence format is not implemented — use --format raw or a container format (mkv, mp4)");
+        return 2;
+    }
     let frames: Int = s.dur_secs * s.fps;
-    let fmt_desc: String = if s.format == "raw" { "stdout-raw" } else if s.format == "png" { "png-sequence" } else if s.container == "mp4" { "mp4/h264" } else { "mkv/av1" };
+    let fmt_desc: String = if s.format == "raw" { "stdout-raw" } else if s.container == "mp4" { "mp4/h264" } else { "mkv/av1" };
+    let cols: Int = if s.width / 8 >= 40 { 80 } else { 40 };
+    let rows: Int = if s.height / 16 >= 20 { 24 } else { 15 };
+    let out_w: Int = if s.format == "raw" { cols * 8 } else { s.width };
+    let out_h: Int = if s.format == "raw" { rows * 16 } else { s.height };
+    let geom: String = out_w.to_string() + "x" + out_h.to_string();
     if s.dry_run {
-        println("dry-run: effect=" + s.effect + " seed=" + s.seed.to_string() + " fps=" + s.fps.to_string() + " frames=" + frames.to_string() + " segments=1 crf=" + s.crf.to_string() + " " + s.width.to_string() + "x" + s.height.to_string() + " format=" + fmt_desc + " -> " + s.output);
-        println("render: wrote " + frames.to_string() + " frame(s) in 1 segment(s) (resumed 0) to " + s.output + " (dry-run)");
+        println("dry-run: effect=" + s.effect + " seed=" + s.seed.to_string() + " fps=" + s.fps.to_string() + " frames=" + frames.to_string() + " segments=1 crf=" + s.crf.to_string() + " " + geom + " format=" + fmt_desc + " -> " + s.output);
+        println("render: wrote " + frames.to_string() + " frame(s) in 1 segment(s) (resumed 0) to " + s.output + " (" + geom + ") (dry-run)");
         return 0;
     }
-    if encode_output(proc, s, frames) != 0 {
+    if encode_output(proc, fs_w, s, frames) != 0 {
         println("render: failed to write output to " + s.output);
         return 1;
     }
-    println("render: wrote " + frames.to_string() + " frame(s) in 1 segment(s) (resumed 0) to " + s.output);
+    println("render: wrote " + frames.to_string() + " frame(s) in 1 segment(s) (resumed 0) to " + s.output + " (" + geom + ")");
     return 0;
 }

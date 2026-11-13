@@ -7,7 +7,7 @@
 //   2. Resolve `render` vs `idle-studio` from `sys_argv0(proc)` or `--persona`.
 //   3. Dispatch to `cmd_render`, `cmd_studio_cli`, or `run_studio_tui` and fail closed on invalid arguments.
 
-import "std/fs/process/process.oo";
+import "oostd/fs/process/process.oo";
 import "ascii/effects.oo";
 import "studio/job_spec.oo";
 import "studio/render.oo";
@@ -70,7 +70,7 @@ pub fn main(
         rest = strip_args(rest, 2);
     }
     if persona == "render" {
-        return Ok(cmd_render(fs_r, proc, rest));
+        return Ok(cmd_render(fs_r, fs_w, proc, rest));
     }
     let mut qpath: String = default_queue_path(env);
     if list_len(rest) >= 2 && list_get(rest, 0) == "--queue" {
@@ -83,7 +83,7 @@ pub fn main(
     let verb: String = list_get(rest, 0);
     let tail: List[String] = strip_args(rest, 1);
     if verb == "tui" { return Ok(run_studio_tui(fs_r, fs_w, proc, ffi, ar, qpath)); }
-    if verb == "render" { return Ok(cmd_render(fs_r, proc, tail)); }
+    if verb == "render" { return Ok(cmd_render(fs_r, fs_w, proc, tail)); }
     if verb == "--help" || verb == "-h" || verb == "help" { return Ok(print_studio_help()); }
     if verb == "--version" || verb == "-V" || verb == "version" {
         println("idle-studio 5.0.1 (openOODA native)");

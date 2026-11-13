@@ -7,9 +7,7 @@
 //   2. Construct and validate `RenderSpec` from CLI flags (`-e`/`--effect`, `--text`, `--duration`, `--fps`, `--width`, `--height`, `--crf`, `--dry-run`, `-o`/`--output`, `--job-file`).
 //   3. Serialize and deserialize `RenderSpec` JSON documents for `idle-studio` queue persistence and `render --job-file` execution.
 
-import "std/core/primitives/str.oo";
-import "core/shell.oo";
-import "ascii/effects.oo";
+import "oostd/core/primitives/str.oo";
 
 pub type RenderSpec = struct {
     effect: String,
@@ -68,7 +66,7 @@ pub fn default_render_spec() -> RenderSpec {
         width: 1280,
         height: 720,
         crf: 35,
-        format: "mp4",
+        format: "mkv",
         container: "mkv",
         output: "/tmp/idlescreen-beams.mkv",
         dry_run: false

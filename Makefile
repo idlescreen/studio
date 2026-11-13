@@ -1,12 +1,17 @@
 OOHAT ?= /Projects/openOODA-agents/oohat/lint-oo-size
 # The compiler follows OODA_HOME so a CI runner that stages the toolchain
 # under /tmp resolves the same path the developer checkout does.
-OODA_COMPILER ?= $(shell command -v oodac 2>/dev/null || echo $(OODA_HOME)/oodac/bin/oodac)
+OODA_COMPILER ?= $(shell command -v oodac 2>/dev/null || if [ -x "$(OODA_HOME)/oodac/bin/oodac" ]; then echo "$(OODA_HOME)/oodac/bin/oodac"; elif [ -x "$(OODA_HOME)/bin/oodac" ]; then echo "$(OODA_HOME)/bin/oodac"; else echo "$(OODA_HOME)/oodac/bin/oodac"; fi)
+# The oodar runtime ships in two layouts: a checkout tree (oodar/core/lib,
+# oodar/scripts/lib) or an install tree (bin/liboodar.a). Point the compiler
+# at whichever one actually holds the archive.
+OODA_OODAR_ROOT ?= $(shell if [ -f "$(OODA_HOME)/oodar/core/lib/liboodar-core.a" ] || [ -f "$(OODA_HOME)/oodar/scripts/lib/liboodar-core.a" ] || [ -f "$(OODA_HOME)/oodar/lib/liboodar-core.a" ] || [ -f "$(OODA_HOME)/oodar/liboodar-core.a" ]; then echo "$(OODA_HOME)/oodar"; elif [ -f "$(OODA_HOME)/bin/liboodar.a" ] || [ -f "$(OODA_HOME)/bin/liboodar-core.a" ]; then echo "$(OODA_HOME)/bin"; else echo "$(OODA_HOME)/oodar"; fi)
+export OODA_OODAR_ROOT
 # The compiler resolves oostd/... imports by walking up from the source tree,
 # so the std repo must be a directory named `oostd` in an ancestor of this
 # project. It also has to sit inside the compiler's FS read scope.
 OODA_HOME ?= $(shell if [ -x "$$HOME/.openooda/bin/oodac" ]; then echo "$$HOME/.openooda"; elif [ -d "$$HOME/Projects/openOODA-core/oodac" ]; then echo "$$HOME/Projects/openOODA-core"; elif [ -d /Projects/openOODA-core/oodac ]; then echo /Projects/openOODA-core; else echo "$(abspath $(CURDIR)/../../openOODA-core)"; fi)
-OODA_STD_DIR ?= $(shell d=$(CURDIR); while [ "$$d" != "/" ]; do if [ -d "$$d/oostd" ]; then echo "$$d/oostd"; break; fi; d=$$(dirname $$d); done)
+OODA_STD_DIR ?= $(shell d=$(CURDIR); r=""; while [ "$$d" != "/" ]; do if [ -d "$$d/oostd" ]; then r="$$d/oostd"; break; fi; d=$$(dirname $$d); done; if [ -z "$$r" ] && [ -d "$(OODA_HOME)/oostd" ]; then r="$(OODA_HOME)/oostd"; fi; echo "$$r")
 OODA_READDIR ?= $(CURDIR):$(OODA_HOME)$(if $(OODA_STD_DIR),:$(OODA_STD_DIR))
 OODA_WRITEDIR ?= $(CURDIR):/tmp
 OO_LIST_AMBIENT_QUOTA ?= 8589934592
@@ -33,6 +38,11 @@ std-check:
 	@test -n "$(OODA_STD_DIR)" || { echo "FAIL: no std repo named oostd in any ancestor of $(CURDIR)"; \
 		echo "      clone openOODA-core/std as \`oostd\` beside this project"; exit 1; }
 	@echo "PASS: std repo at $(OODA_STD_DIR)"
+	@if [ ! -f "$(OODA_OODAR_ROOT)/liboodar.a" ] && [ ! -f "$(OODA_OODAR_ROOT)/liboodar-core.a" ] \
+		&& [ ! -f "$(OODA_OODAR_ROOT)/core/lib/liboodar-core.a" ] && [ ! -f "$(OODA_OODAR_ROOT)/scripts/lib/liboodar-core.a" ]; then \
+		echo "FAIL: no oodar runtime at $(OODA_OODAR_ROOT) — install the openOODA toolchain (https://openooda.org/install.sh)"; \
+		exit 1; \
+	fi
 
 # The compiler's own typecheck over every page. The studio tree had no such
 # gate, so unused imports and broken pages stayed invisible until a build.
@@ -138,17 +148,18 @@ shape:
 	echo "PASS: function count (<= 8 per page) and length (<= 64 lines) hold"
 
 test: build
+	@rm -rf .ooda-cache
 	@mkdir -p .ooda-cache
 	@$(ENV) $(OODA_COMPILER) build tests/test_main.oo -o $(TESTBIN)
-	@./$(TESTBIN)
+	@$(ENV) ./$(TESTBIN)
 	@rm -f $(TESTBIN)
-	@./bin/idle-studio --self-test
-	@./bin/render --persona render -e beams --duration 1s --dry-run -o /tmp/test-beams.mkv | grep -q "dry-run: effect=beams" && echo "PASS: render dry-run"
-	@./bin/render -e beams --duration 1s --dry-run -o /tmp/test-beams-alias.mkv | grep -q "dry-run: effect=beams" && echo "PASS: render alias dispatch"
-	@./bin/render --persona render -e plasma --duration 1s --fps 1 --format raw -o /tmp/test-real.argb && test "$$(wc -c < /tmp/test-real.argb)" -eq 983040 && echo "PASS: render real encode (byte-exact raw)"
-	@./bin/idle-studio --queue .ooda-cache/q.json enqueue -e aurora --duration 2s --dry-run -o /tmp/test-aurora.mkv | grep -q "enqueued job-1" && echo "PASS: studio enqueue"
-	@./bin/idle-studio --queue .ooda-cache/q.json list | grep -q "job-1 pending aurora" && echo "PASS: studio list"
-	@./bin/idle-studio --queue .ooda-cache/q.json run --all | grep -q "done job-1" && echo "PASS: studio run"
+	@$(ENV) ./bin/idle-studio --self-test
+	@$(ENV) ./bin/render --persona render -e beams --duration 1s --dry-run -o /tmp/test-beams.mkv | grep -q "dry-run: effect=beams" && echo "PASS: render dry-run"
+	@$(ENV) ./bin/render -e beams --duration 1s --dry-run -o /tmp/test-beams-alias.mkv | grep -q "dry-run: effect=beams" && echo "PASS: render alias dispatch"
+	@$(ENV) ./bin/render --persona render -e plasma --duration 1s --fps 1 --format raw -o /tmp/test-real.argb && test "$$(wc -c < /tmp/test-real.argb)" -eq 983040 && echo "PASS: render real encode (byte-exact raw)"
+	@$(ENV) ./bin/idle-studio --queue .ooda-cache/q.json enqueue -e aurora --duration 2s --dry-run -o /tmp/test-aurora.mkv | grep -q "enqueued job-1" && echo "PASS: studio enqueue"
+	@$(ENV) ./bin/idle-studio --queue .ooda-cache/q.json list | grep -q "job-1 pending aurora" && echo "PASS: studio list"
+	@$(ENV) ./bin/idle-studio --queue .ooda-cache/q.json run --all | grep -q "done job-1" && echo "PASS: studio run"
 	@rm -rf .ooda-cache
 	@echo "PASS: all idle-studio & render tests"
 

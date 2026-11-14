@@ -51,7 +51,7 @@ jobs:
           test -x bin/render
           ./bin/idle-studio --self-test
 
-      - name: Package .deb and .rpm artifacts
+      - name: Package .rpm artifacts
         if: steps.gate.outputs.build == 'yes'
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
@@ -59,23 +59,48 @@ jobs:
           sudo apt-get update && sudo apt-get install -y rpm
           v="${RELEASE_TAG#v}"
           mkdir -p dist
+          spec_dir="$(mktemp -d)"
           for pkg in idle-studio render; do
-            stage=$(mktemp -d)
-            mkdir -p "$stage/DEBIAN" "$stage/usr/bin"
-            cp "bin/$pkg" "$stage/usr/bin/$pkg"
-            chmod 0755 "$stage/usr/bin/$pkg"
-            cat > "$stage/DEBIAN/control" <<EOF
-          Package: $pkg
-          Version: ${v}-1
-          Section: utils
-          Priority: optional
-          Architecture: amd64
-          Maintainer: IdleScreen <maintainers@idlescreen.github.io>
-          Description: IdleScreen Studio native openOODA (.oo) tool ($pkg)
+            cat > "$spec_dir/${pkg}.spec" <<EOF
+          Name:           ${pkg}
+          Version:        ${v}
+          Release:        1
+          Summary:        IdleScreen Studio native openOODA (.oo) tool (${pkg})
+          License:        MIT
+          BuildArch:      x86_64
+          AutoReqProv:    no
+          AutoReq:        none
+          # The runner has no elfutils and the package ships a prebuilt
+          # binary, so the debug-info split has nothing to extract.
+          %global debug_package %{nil}
+          %define __find_debuginfo /bin/true
+
+          %description
+          IdleScreen Studio native openOODA (.oo) tool (${pkg}).
+
+          %build
+
+          %install
+          mkdir -p %{buildroot}%{_bindir}
+          install -m 0755 %{_sourcedir}/${pkg} %{buildroot}%{_bindir}/${pkg}
+
+          %files
+          %{_bindir}/${pkg}
+
+          %changelog
+          * Fri Nov 13 2026 IdleScreen <maintainers@idlescreen.github.io> - ${v}-1
+          - Native openOODA (.oo) build.
           EOF
-            dpkg-deb --build "$stage" "dist/${pkg}_${v}-1_amd64.deb"
-            rm -rf "$stage"
+            topdir="$spec_dir/rpmbuild"
+            mkdir -p "$topdir/SOURCES"
+            cp "bin/$pkg" "$topdir/SOURCES/$pkg"
+            rpmbuild --build-in-place \
+              --define "_topdir $topdir" \
+              --define "_rpmdir $spec_dir" \
+              -bb "$spec_dir/${pkg}.spec"
           done
+          mv "$spec_dir"/x86_64/*.rpm dist/
+          ls -la dist/
 
       - name: Install Cosign & Sign packages
         if: steps.gate.outputs.build == 'yes'
@@ -84,7 +109,7 @@ jobs:
           chmod +x cosign
           sudo mv cosign /usr/local/bin/
           shopt -s nullglob
-          for file in dist/*.deb dist/*.rpm; do
+          for file in dist/*.rpm; do
             cosign sign-blob --yes --output-signature "${file}.sig" --output-certificate "${file}.pem" "$file"
           done
 
